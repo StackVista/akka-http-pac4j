@@ -1,0 +1,37 @@
+**/target
+**/.idea
+**/*.iml
+**/.DS_Store
+
+# use glob syntax.
+syntax: glob
+.gradle/
+.vscode
+
+# Build output
+build/
+target/
+out/
+
+# Log output
+log/
+*/logs/
+
+# Floobits
+.floo
+.flooignore
+
+# IntelliJ
+.idea/
+*.iml
+*.ipr
+*.iws
+*.log
+/classes
+**/idea_build
+out/
+
+# Sublime
+*.sublime*
+*.sublime-project
+*.sublime-workspace
