@@ -12,8 +12,8 @@ lazy val root = (project in file(".")).
       akkaHttp,
       akkaStreams,
       pac4j,
-      specs2Core % Test,
-      specs2Scalacheck % Test,
+      scalactic,
+      scalaTestCore % Test,
       scalacheck % Test
     ),
       scalacOptions ++= Seq(
