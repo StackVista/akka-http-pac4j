@@ -1,10 +1,10 @@
-package akka.pac4j.http
+package com.stackstate.pac4j.http
 
 import akka.http.scaladsl.model.HttpResponse
-import akka.pac4j.AkkaHttpWebContext
 import org.pac4j.core.context.HttpConstants
 import org.pac4j.core.http.adapter.HttpActionAdapter
 import akka.http.scaladsl.model.StatusCodes._
+import com.stackstate.pac4j.AkkaHttpWebContext
 
 object AkkaHttpActionAdapter extends HttpActionAdapter[HttpResponse, AkkaHttpWebContext] {
   override def adapt(code: Int, context: AkkaHttpWebContext) = {

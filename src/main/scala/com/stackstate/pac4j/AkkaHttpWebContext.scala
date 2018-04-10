@@ -1,4 +1,4 @@
-package akka.pac4j
+package com.stackstate.pac4j
 
 import org.pac4j.core.context.{Cookie, WebContext}
 
