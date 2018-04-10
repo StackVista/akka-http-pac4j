@@ -1,7 +1,6 @@
 package com.stackstate.pac4j
 
 import akka.http.scaladsl.model.HttpResponse
-import akka.pac4j.http.AkkaHttpActionAdapter
 import org.scalatest.{Matchers, WordSpecLike}
 import akka.http.scaladsl.model.StatusCodes._
 import com.stackstate.pac4j.http.AkkaHttpActionAdapter
