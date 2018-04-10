@@ -36,3 +36,5 @@ lazy val root = (project in file(".")).
       "-Xfatal-warnings"
     )
   )
+
+useGpg := true

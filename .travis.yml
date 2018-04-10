@@ -1,7 +1,11 @@
 language: scala
-
 sudo: false
 
-jdk: oraclejdk8
+matrix:
+  include:
+    - jdk: oraclejdk8
+    - scala: 2.12.4
 
-scala: 2.12.4
+  script:
+    - sbt test
+
