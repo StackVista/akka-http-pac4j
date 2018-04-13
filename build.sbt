@@ -14,7 +14,8 @@ lazy val root = (project in file(".")).
       pac4j,
       scalactic,
       scalaTestCore % Test,
-      scalacheck % Test
+      scalacheck % Test,
+      mockitoCore % Test
     ),
       scalacOptions ++= Seq(
   "-deprecation",           
@@ -23,12 +24,11 @@ lazy val root = (project in file(".")).
   "-language:existentials",
   "-language:higherKinds",
   "-language:implicitConversions",
+  "-language:postfixOps",
   "-unchecked",
   "-Xfatal-warnings",       
   "-Xlint",
-  "-Yno-adapted-args",       
-  "-Ywarn-numeric-widen",
-  "-Ywarn-value-discard",
+  "-Yno-adapted-args",
   "-Xfuture",
       ),
     scalacOptions in (Compile, console) --= Seq(

@@ -1,46 +1,49 @@
 package com.stackstate.pac4j
 
-import org.pac4j.core.context.{Cookie, WebContext}
+import java.util
 
-class AkkaHttpWebContext extends WebContext {
+import akka.http.scaladsl.model.HttpRequest
+import org.pac4j.core.context.{ Cookie, WebContext }
 
-  override def getRequestCookies = ???
+case class AkkaHttpWebContext(request: HttpRequest) extends WebContext {
 
-  override def addResponseCookie(cookie: Cookie) = ???
+  override def getRequestCookies: util.Collection[Cookie] = ???
+
+  override def addResponseCookie(cookie: Cookie): Unit = ???
 
   override def getSessionStore = ???
 
-  override def getRemoteAddr = ???
+  override def getRemoteAddr: String = ???
 
-  override def setResponseHeader(name: String, value: String) = ???
+  override def setResponseHeader(name: String, value: String): Unit = ???
 
-  override def getRequestParameters = ???
+  override def getRequestParameters: util.Map[String, Array[String]] = ???
 
-  override def getFullRequestURL = ???
+  override def getFullRequestURL: String = ???
 
-  override def getServerName = ???
+  override def getServerName: String = ???
 
-  override def setResponseContentType(content: String) = ???
+  override def setResponseContentType(content: String): Unit = ???
 
-  override def writeResponseContent(content: String) = ???
+  override def writeResponseContent(content: String): Unit = ???
 
-  override def getPath = ???
+  override def getPath: String = ???
 
-  override def setResponseStatus(code: Int) = ???
+  override def setResponseStatus(code: Int): Unit = ???
 
-  override def getRequestParameter(name: String) = ???
+  override def getRequestParameter(name: String): String = ???
 
-  override def getRequestHeader(name: String) = ???
+  override def getRequestHeader(name: String): String = ???
 
-  override def getScheme = ???
+  override def getScheme: String = ???
 
-  override def isSecure = ???
+  override def isSecure: Boolean = ???
 
-  override def getRequestMethod = ???
+  override def getRequestMethod: String = ???
 
-  override def getServerPort = ???
+  override def getServerPort: Int = ???
 
-  override def setRequestAttribute(name: String, value: scala.Any) = ???
+  override def setRequestAttribute(name: String, value: scala.AnyRef): Unit = ???
 
-  override def getRequestAttribute(name: String) = ???
+  override def getRequestAttribute(name: String): AnyRef = ???
 }
