@@ -76,7 +76,7 @@ case class AkkaHttpWebContext(request: HttpRequest) extends WebContext {
   override def isSecure: Boolean = {
     val scheme = request.getUri().getScheme.toLowerCase
 
-    scheme == "https" || scheme == "ldap"
+    scheme == "https"
   }
 
   override def getRequestMethod: String = {
