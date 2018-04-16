@@ -19,6 +19,9 @@ class AkkaHttpWebContextTest extends WordSpecLike with Matchers {
       webContext.getRequestHeader("foo") shouldEqual "bar"
       webContext.getRequestHeader("abc") shouldEqual ""
     }
+    "make sure request headers are case insensitive" in withContext(requestHeaders = List(("foo", "bar"))) { webContext =>
+      webContext.getRequestHeader("FOO") shouldEqual "bar"
+    }
 
     "get the full url from a request" in withContext(url = "www.stackstate.com/views") { webContext =>
       webContext.getFullRequestURL shouldEqual "http://www.stackstate.com/views"

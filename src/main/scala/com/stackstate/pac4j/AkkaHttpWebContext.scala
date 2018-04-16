@@ -12,12 +12,11 @@ case class AkkaHttpWebContext(request: HttpRequest) extends WebContext {
   import com.stackstate.pac4j.AkkaHttpWebContext._
 
   private var changes = ResponseChanges.empty
+  private lazy val requestCookies = request.cookies.map { akkaCookie =>
+    new Cookie(akkaCookie.name, akkaCookie.value)
+  }.asJavaCollection
 
-  override def getRequestCookies: java.util.Collection[Cookie] = {
-    request.cookies.map { akkaCookie =>
-      new Cookie(akkaCookie.name, akkaCookie.value)
-    }.asJavaCollection
-  }
+  override def getRequestCookies: java.util.Collection[Cookie] = requestCookies
 
   override def addResponseCookie(cookie: Cookie): Unit = {
     changes = changes.copy(cookies = changes.cookies ++ List(cookie))
@@ -66,7 +65,7 @@ case class AkkaHttpWebContext(request: HttpRequest) extends WebContext {
   }
 
   override def getRequestHeader(name: String): String = {
-    request.headers.find(_.name() == name).map(_.value).getOrElse("")
+    request.headers.find(_.name().toLowerCase() == name.toLowerCase).map(_.value).getOrElse("")
   }
 
   override def getScheme: String = {
