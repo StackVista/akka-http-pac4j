@@ -2,8 +2,8 @@ package com.stackstate.pac4j
 
 import akka.http.scaladsl.model.HttpHeader.ParsingResult.Ok
 import akka.http.scaladsl.model.headers.Cookie
-import akka.http.scaladsl.model.{ContentTypes, HttpHeader, HttpRequest, Uri}
-import org.scalatest.{Matchers, WordSpecLike}
+import akka.http.scaladsl.model.{ ContentTypes, HttpHeader, HttpRequest, Uri }
+import org.scalatest.{ Matchers, WordSpecLike }
 
 import scala.collection.JavaConverters._
 

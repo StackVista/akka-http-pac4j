@@ -1,7 +1,7 @@
 package com.stackstate.pac4j
 
-import akka.http.scaladsl.model.{ContentType, ContentTypes, HttpRequest}
-import org.pac4j.core.context.{Cookie, WebContext}
+import akka.http.scaladsl.model.{ ContentType, ContentTypes, HttpRequest }
+import org.pac4j.core.context.{ Cookie, WebContext }
 
 import scala.collection.JavaConverters._
 
@@ -114,12 +114,12 @@ case class AkkaHttpWebContext(request: HttpRequest) extends WebContext {
 object AkkaHttpWebContext {
 
   //This class is where all the HTTP response changes are stored so that they can later be applied to an HTTP Request
-  case class ResponseChanges private(
-                                      headers: List[(String, String)],
-                                      contentType: ContentType,
-                                      content: String,
-                                      cookies: List[Cookie],
-                                      attributes: Map[String, AnyRef])
+  case class ResponseChanges private (
+    headers: List[(String, String)],
+    contentType: ContentType,
+    content: String,
+    cookies: List[Cookie],
+    attributes: Map[String, AnyRef])
 
   object ResponseChanges {
     def empty: ResponseChanges = {
