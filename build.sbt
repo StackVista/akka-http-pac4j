@@ -14,7 +14,8 @@ lazy val root = (project in file(".")).
       pac4j,
       scalactic,
       scalaTestCore % Test,
-      scalacheck % Test
+      scalacheck % Test,
+      akkaHttpTestKit % Test
     ),
       scalacOptions ++= Seq(
   "-deprecation",           
@@ -24,7 +25,7 @@ lazy val root = (project in file(".")).
   "-language:higherKinds",
   "-language:implicitConversions",
   "-unchecked",
-  "-Xfatal-warnings",       
+  // "-Xfatal-warnings", // TODO: Should be reenabled when implementation is complete
   "-Xlint",
   "-Yno-adapted-args",       
   "-Ywarn-numeric-widen",
