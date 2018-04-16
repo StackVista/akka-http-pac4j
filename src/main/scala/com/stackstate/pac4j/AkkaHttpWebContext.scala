@@ -101,7 +101,7 @@ case class AkkaHttpWebContext(request: HttpRequest) extends WebContext {
 object AkkaHttpWebContext {
 
   //This class is where all the HTTP response changes are stored so that they can later be applied to an HTTP Request
-  case class ResponseChanges(
+  case class ResponseChanges private(
     headers: List[(String, String)],
     contentType: String,
     content: String,
