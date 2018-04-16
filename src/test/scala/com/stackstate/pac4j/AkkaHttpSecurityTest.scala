@@ -1,15 +1,15 @@
 package com.stackstate.pac4j
 
-import java.{lang, util}
+import java.{ lang, util }
 
 import akka.http.scaladsl.server.AuthorizationFailedRejection
-import akka.http.scaladsl.model.{HttpRequest, HttpResponse, StatusCodes}
+import akka.http.scaladsl.model.{ ContentTypes, HttpRequest, HttpResponse, StatusCodes }
 import com.stackstate.pac4j.AkkaHttpSecurity.AkkaHttpSecurityLogic
 import org.pac4j.core.config.Config
-import org.pac4j.core.engine.{DefaultSecurityLogic, SecurityGrantedAccessAdapter}
+import org.pac4j.core.engine.{ DefaultSecurityLogic, SecurityGrantedAccessAdapter }
 import org.pac4j.core.http.adapter.HttpActionAdapter
 import org.pac4j.core.context.Cookie
-import org.scalatest.{Matchers, WordSpecLike}
+import org.scalatest.{ Matchers, WordSpecLike }
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.RouteResult
 import akka.http.scaladsl.server.RouteResult.Complete
@@ -93,7 +93,7 @@ class AkkaHttpSecurityTest extends WordSpecLike with Matchers with ScalatestRout
       Get("/") ~> akkaHttpSecurity.withAuthentication() { _ => complete("problem!") } ~> check {
         status shouldEqual StatusCodes.OK
         responseAs[String] shouldBe "called!"
-        header("MyHeader") shouldBe "MyValue"
+        header("MyHeader").get.value() shouldBe "MyValue"
       }
     }
 
@@ -120,7 +120,7 @@ class AkkaHttpSecurityTest extends WordSpecLike with Matchers with ScalatestRout
       Get("/") ~> akkaHttpSecurity.withAuthentication() { _ => complete("problem!") } ~> check {
         status shouldEqual StatusCodes.OK
         responseAs[String] shouldBe "called!"
-        header("MyCookie") shouldBe "MyValue"
+        header("Set-Cookie").get.value() shouldBe "MyCookie=MyValue"
       }
     }
 
@@ -129,8 +129,8 @@ class AkkaHttpSecurityTest extends WordSpecLike with Matchers with ScalatestRout
 
       config.setSecurityLogic(new AkkaHttpSecurityLogic {
         override def perform(context: AkkaHttpWebContext, config: Config, securityGrantedAccessAdapter: SecurityGrantedAccessAdapter[Future[RouteResult], AkkaHttpWebContext], httpActionAdapter: HttpActionAdapter[Future[RouteResult], AkkaHttpWebContext], clients: String, authorizers: String, matchers: String, multiProfile: lang.Boolean, parameters: AnyRef*): Future[RouteResult] = {
-          context.setResponseContentType("html")
-          Future.successful(Complete(HttpResponse(StatusCodes.OK, entity = "called!")))
+          context.setResponseContentType("text/html; charset=UTF-8")
+          httpActionAdapter.adapt(200, context)
         }
       })
 
@@ -138,8 +138,8 @@ class AkkaHttpSecurityTest extends WordSpecLike with Matchers with ScalatestRout
 
       Get("/") ~> akkaHttpSecurity.withAuthentication() { _ => complete("problem!") } ~> check {
         status shouldEqual StatusCodes.OK
-        responseAs[String] shouldBe "called!"
-        contentType shouldEqual "html"
+        responseAs[String] shouldBe ""
+        contentType shouldEqual ContentTypes.`text/html(UTF-8)`
       }
     }
 
@@ -149,7 +149,7 @@ class AkkaHttpSecurityTest extends WordSpecLike with Matchers with ScalatestRout
       config.setSecurityLogic(new AkkaHttpSecurityLogic {
         override def perform(context: AkkaHttpWebContext, config: Config, securityGrantedAccessAdapter: SecurityGrantedAccessAdapter[Future[RouteResult], AkkaHttpWebContext], httpActionAdapter: HttpActionAdapter[Future[RouteResult], AkkaHttpWebContext], clients: String, authorizers: String, matchers: String, multiProfile: lang.Boolean, parameters: AnyRef*): Future[RouteResult] = {
           context.writeResponseContent("called!")
-          Future.successful(Complete(HttpResponse(StatusCodes.OK, entity = "")))
+          httpActionAdapter.adapt(200, context)
         }
       })
 
