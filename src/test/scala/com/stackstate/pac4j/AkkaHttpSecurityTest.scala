@@ -79,6 +79,25 @@ class AkkaHttpSecurityTest extends WordSpecLike with Matchers with ScalatestRout
       }
     }
 
+    "sets response headers when they are set in the security logic" in {
+      val config = new Config()
+
+      config.setSecurityLogic(new AkkaHttpSecurityLogic {
+        override def perform(context: AkkaHttpWebContext, config: Config, securityGrantedAccessAdapter: SecurityGrantedAccessAdapter[Future[RouteResult], AkkaHttpWebContext], httpActionAdapter: HttpActionAdapter[Future[RouteResult], AkkaHttpWebContext], clients: String, authorizers: String, matchers: String, multiProfile: lang.Boolean, parameters: AnyRef*): Future[RouteResult] = {
+          context.setResponseHeader("MyHeader", "MyValue")
+          Future.successful(Complete(HttpResponse(StatusCodes.OK, entity = "called!")))
+        }
+      })
+
+      val akkaHttpSecurity = new AkkaHttpSecurity[CommonProfile](config)
+
+      Get("/") ~> akkaHttpSecurity.withAuthentication() { _ => complete("problem!") } ~> check {
+        status shouldEqual StatusCodes.OK
+        responseAs[String] shouldBe "called!"
+        header("MyHeader") shouldBe "MyValue"
+      }
+    }
+
     "sets the proper defaults" in {
       val config = new Config()
 
