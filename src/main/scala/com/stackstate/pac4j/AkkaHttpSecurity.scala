@@ -47,7 +47,7 @@ class AkkaHttpSecurity[P <: CommonProfile](config: Config) {
     multiProfile: Boolean = true): Directive1[AuthenticatedRequest] =
     new Directive1[AuthenticatedRequest] {
       override def tapply(innerRoute: Tuple1[AuthenticatedRequest] => Route): Route = { ctx =>
-        val context = new AkkaHttpWebContext()
+        val context = AkkaHttpWebContext(ctx.request)
         securityLogic.perform(context, config, (context: AkkaHttpWebContext, profiles: util.Collection[CommonProfile], parameters: AnyRef) => {
           val authenticatedRequest = AuthenticatedRequest(context, profiles.asScala.toList)
           innerRoute(Tuple1(authenticatedRequest))(ctx)

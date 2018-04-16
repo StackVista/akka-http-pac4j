@@ -1,15 +1,14 @@
 package com.stackstate.pac4j
 
-import java.{ lang, util }
+import java.{lang, util}
 
 import akka.http.scaladsl.server.AuthorizationFailedRejection
-import akka.http.scaladsl.model.HttpResponse
+import akka.http.scaladsl.model.{HttpRequest, HttpResponse, StatusCodes}
 import com.stackstate.pac4j.AkkaHttpSecurity.AkkaHttpSecurityLogic
 import org.pac4j.core.config.Config
-import org.pac4j.core.engine.{ DefaultSecurityLogic, SecurityGrantedAccessAdapter }
+import org.pac4j.core.engine.{DefaultSecurityLogic, SecurityGrantedAccessAdapter}
 import org.pac4j.core.http.adapter.HttpActionAdapter
-import org.scalatest.{ Matchers, WordSpecLike }
-import akka.http.scaladsl.model.StatusCodes
+import org.scalatest.{Matchers, WordSpecLike}
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.RouteResult
 import akka.http.scaladsl.server.RouteResult.Complete
@@ -58,7 +57,6 @@ class AkkaHttpSecurityTest extends WordSpecLike with Matchers with ScalatestRout
 
       config.setSecurityLogic(new AkkaHttpSecurityLogic {
         override def perform(context: AkkaHttpWebContext, config: Config, securityGrantedAccessAdapter: SecurityGrantedAccessAdapter[Future[RouteResult], AkkaHttpWebContext], httpActionAdapter: HttpActionAdapter[Future[RouteResult], AkkaHttpWebContext], clients: String, authorizers: String, matchers: String, multiProfile: lang.Boolean, parameters: AnyRef*): Future[RouteResult] = {
-          val context = new AkkaHttpWebContext
           securityGrantedAccessAdapter.adapt(context, List(profile).asJava)
         }
       })
@@ -110,7 +108,7 @@ class AkkaHttpSecurityTest extends WordSpecLike with Matchers with ScalatestRout
   "AkkaHttpSecurity.authorize" should {
     "pass the provided authenticationRequest to the authorizer" in {
       val profile = new CommonProfile()
-      val context = new AkkaHttpWebContext
+      val context = AkkaHttpWebContext(HttpRequest())
 
       val route =
         AkkaHttpSecurity.authorize((context: WebContext, profiles: util.List[CommonProfile]) => {
@@ -125,7 +123,7 @@ class AkkaHttpSecurityTest extends WordSpecLike with Matchers with ScalatestRout
     }
 
     "reject when authorization fails" in {
-      val context = new AkkaHttpWebContext
+      val context = AkkaHttpWebContext(HttpRequest())
 
       val route =
         AkkaHttpSecurity.authorize((context: WebContext, profiles: util.List[CommonProfile]) => {
@@ -138,7 +136,7 @@ class AkkaHttpSecurityTest extends WordSpecLike with Matchers with ScalatestRout
     }
 
     "succeed when authorization succeeded" in {
-      val context = new AkkaHttpWebContext
+      val context = AkkaHttpWebContext(HttpRequest())
 
       val route =
         AkkaHttpSecurity.authorize((context: WebContext, profiles: util.List[CommonProfile]) => {

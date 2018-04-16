@@ -6,7 +6,6 @@ object Dependencies {
   lazy val akkaHttpTestKit = "com.typesafe.akka" %% "akka-http-testkit" % akkaHttpVersion
   lazy val akkaStreams = "com.typesafe.akka" %% "akka-stream" % akkaStreamsVersion
   lazy val pac4j = "org.pac4j" % "pac4j-core" % pac4jVersion
-  lazy val scalactic = "org.scalactic" %% "scalactic" % scalaTestVersion
   lazy val scalaTestCore = "org.scalatest" %% "scalatest" % scalaTestVersion
 
 

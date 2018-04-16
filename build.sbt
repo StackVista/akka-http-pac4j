@@ -12,7 +12,6 @@ lazy val root = (project in file(".")).
       akkaHttp,
       akkaStreams,
       pac4j,
-      scalactic,
       scalaTestCore % Test,
       scalacheck % Test,
       akkaHttpTestKit % Test
@@ -24,12 +23,11 @@ lazy val root = (project in file(".")).
   "-language:existentials",
   "-language:higherKinds",
   "-language:implicitConversions",
+  "-language:postfixOps",
   "-unchecked",
   // "-Xfatal-warnings", // TODO: Should be reenabled when implementation is complete
   "-Xlint",
-  "-Yno-adapted-args",       
-  "-Ywarn-numeric-widen",
-  "-Ywarn-value-discard",
+  "-Yno-adapted-args",
   "-Xfuture",
       ),
     scalacOptions in (Compile, console) --= Seq(
