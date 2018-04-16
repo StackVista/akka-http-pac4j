@@ -1,6 +1,6 @@
 package com.stackstate.pac4j.http
 
-import akka.http.scaladsl.model.HttpResponse
+import akka.http.scaladsl.model.{HttpEntity, HttpResponse}
 import org.pac4j.core.context.HttpConstants
 import org.pac4j.core.http.adapter.HttpActionAdapter
 import akka.http.scaladsl.model.StatusCodes._
@@ -17,7 +17,7 @@ object AkkaHttpActionAdapter extends HttpActionAdapter[Future[RouteResult], Akka
       case HttpConstants.BAD_REQUEST => HttpResponse(BadRequest)
       case HttpConstants.CREATED => HttpResponse(Created)
       case HttpConstants.FORBIDDEN => HttpResponse(Forbidden)
-      case HttpConstants.OK => HttpResponse(OK) //TODO: Also include the response content in the ok response
+      case HttpConstants.OK => HttpResponse(OK, entity = HttpEntity.apply(context.getResponseContent))
       case HttpConstants.NO_CONTENT => HttpResponse(NoContent)
     }))
   }

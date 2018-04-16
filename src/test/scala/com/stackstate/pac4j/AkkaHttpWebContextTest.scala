@@ -2,8 +2,9 @@ package com.stackstate.pac4j
 
 import akka.http.scaladsl.model.HttpHeader.ParsingResult.Ok
 import akka.http.scaladsl.model.headers.Cookie
-import akka.http.scaladsl.model.{ HttpHeader, HttpRequest, Uri }
-import org.scalatest.{ Matchers, WordSpecLike }
+import akka.http.scaladsl.model.{ContentTypes, HttpHeader, HttpRequest, Uri}
+import org.scalatest.{Matchers, WordSpecLike}
+
 import scala.collection.JavaConverters._
 
 class AkkaHttpWebContextTest extends WordSpecLike with Matchers {
@@ -60,7 +61,12 @@ class AkkaHttpWebContextTest extends WordSpecLike with Matchers {
 
     "get/set response content" in withContext() { webContext =>
       webContext.writeResponseContent("content")
-      webContext.getChanges.content shouldEqual "content"
+      webContext.getResponseContent shouldEqual "content"
+    }
+
+    "get/set content type" in withContext() { webContext =>
+      webContext.setResponseContentType("application/json")
+      webContext.getContentType shouldEqual ContentTypes.`application/json`
     }
 
     "know if a url is secure" in withContext(scheme = "https") { webContext =>

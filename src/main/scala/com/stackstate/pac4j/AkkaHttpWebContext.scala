@@ -1,7 +1,8 @@
 package com.stackstate.pac4j
 
-import akka.http.scaladsl.model.HttpRequest
-import org.pac4j.core.context.{ Cookie, WebContext }
+import akka.http.scaladsl.model.{ContentType, ContentTypes, HttpRequest}
+import org.pac4j.core.context.{Cookie, WebContext}
+
 import scala.collection.JavaConverters._
 
 /**
@@ -45,7 +46,12 @@ case class AkkaHttpWebContext(request: HttpRequest) extends WebContext {
   }
 
   override def setResponseContentType(contentType: String): Unit = {
-    changes = changes.copy(contentType = contentType)
+    ContentType.parse(contentType) match {
+      case Right(ct) =>
+        changes = changes.copy(contentType = ct)
+      case Left(_) => //TODO: Proper logging
+        ()
+    }
   }
 
   override def writeResponseContent(content: String): Unit = {
@@ -94,6 +100,14 @@ case class AkkaHttpWebContext(request: HttpRequest) extends WebContext {
     changes.attributes.getOrElse(name, "")
   }
 
+  def getResponseContent: String = {
+    changes.content
+  }
+
+  def getContentType: ContentType = {
+    changes.contentType
+  }
+
   def getChanges: ResponseChanges = changes
 }
 
@@ -101,15 +115,15 @@ object AkkaHttpWebContext {
 
   //This class is where all the HTTP response changes are stored so that they can later be applied to an HTTP Request
   case class ResponseChanges private(
-    headers: List[(String, String)],
-    contentType: String,
-    content: String,
-    cookies: List[Cookie],
-    attributes: Map[String, AnyRef])
+                                      headers: List[(String, String)],
+                                      contentType: ContentType,
+                                      content: String,
+                                      cookies: List[Cookie],
+                                      attributes: Map[String, AnyRef])
 
   object ResponseChanges {
     def empty: ResponseChanges = {
-      ResponseChanges(List.empty, "", "", List.empty, Map.empty)
+      ResponseChanges(List.empty, ContentTypes.`text/plain(UTF-8)`, "", List.empty, Map.empty)
     }
   }
 

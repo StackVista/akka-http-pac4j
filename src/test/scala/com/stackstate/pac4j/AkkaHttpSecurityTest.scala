@@ -8,6 +8,7 @@ import com.stackstate.pac4j.AkkaHttpSecurity.AkkaHttpSecurityLogic
 import org.pac4j.core.config.Config
 import org.pac4j.core.engine.{DefaultSecurityLogic, SecurityGrantedAccessAdapter}
 import org.pac4j.core.http.adapter.HttpActionAdapter
+import org.pac4j.core.context.Cookie
 import org.scalatest.{Matchers, WordSpecLike}
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.RouteResult
@@ -102,6 +103,62 @@ class AkkaHttpSecurityTest extends WordSpecLike with Matchers with ScalatestRout
       val akkaHttpSecurity = new AkkaHttpSecurity[CommonProfile](config)
       akkaHttpSecurity.actionAdapter shouldBe AkkaHttpActionAdapter
       akkaHttpSecurity.securityLogic.getClass shouldBe classOf[DefaultSecurityLogic[_, _]]
+    }
+
+    "sets response cookies when they're set in the security logic" in {
+      val config = new Config()
+
+      config.setSecurityLogic(new AkkaHttpSecurityLogic {
+        override def perform(context: AkkaHttpWebContext, config: Config, securityGrantedAccessAdapter: SecurityGrantedAccessAdapter[Future[RouteResult], AkkaHttpWebContext], httpActionAdapter: HttpActionAdapter[Future[RouteResult], AkkaHttpWebContext], clients: String, authorizers: String, matchers: String, multiProfile: lang.Boolean, parameters: AnyRef*): Future[RouteResult] = {
+          context.addResponseCookie(new Cookie("MyCookie", "MyValue"))
+          Future.successful(Complete(HttpResponse(StatusCodes.OK, entity = "called!")))
+        }
+      })
+
+      val akkaHttpSecurity = new AkkaHttpSecurity[CommonProfile](config)
+
+      Get("/") ~> akkaHttpSecurity.withAuthentication() { _ => complete("problem!") } ~> check {
+        status shouldEqual StatusCodes.OK
+        responseAs[String] shouldBe "called!"
+        header("MyCookie") shouldBe "MyValue"
+      }
+    }
+
+    "sets response content type when its set in the security logic" in {
+      val config = new Config()
+
+      config.setSecurityLogic(new AkkaHttpSecurityLogic {
+        override def perform(context: AkkaHttpWebContext, config: Config, securityGrantedAccessAdapter: SecurityGrantedAccessAdapter[Future[RouteResult], AkkaHttpWebContext], httpActionAdapter: HttpActionAdapter[Future[RouteResult], AkkaHttpWebContext], clients: String, authorizers: String, matchers: String, multiProfile: lang.Boolean, parameters: AnyRef*): Future[RouteResult] = {
+          context.setResponseContentType("html")
+          Future.successful(Complete(HttpResponse(StatusCodes.OK, entity = "called!")))
+        }
+      })
+
+      val akkaHttpSecurity = new AkkaHttpSecurity[CommonProfile](config)
+
+      Get("/") ~> akkaHttpSecurity.withAuthentication() { _ => complete("problem!") } ~> check {
+        status shouldEqual StatusCodes.OK
+        responseAs[String] shouldBe "called!"
+        contentType shouldEqual "html"
+      }
+    }
+
+    "sets response content when its written by the security logic" in {
+      val config = new Config()
+
+      config.setSecurityLogic(new AkkaHttpSecurityLogic {
+        override def perform(context: AkkaHttpWebContext, config: Config, securityGrantedAccessAdapter: SecurityGrantedAccessAdapter[Future[RouteResult], AkkaHttpWebContext], httpActionAdapter: HttpActionAdapter[Future[RouteResult], AkkaHttpWebContext], clients: String, authorizers: String, matchers: String, multiProfile: lang.Boolean, parameters: AnyRef*): Future[RouteResult] = {
+          context.writeResponseContent("called!")
+          Future.successful(Complete(HttpResponse(StatusCodes.OK, entity = "")))
+        }
+      })
+
+      val akkaHttpSecurity = new AkkaHttpSecurity[CommonProfile](config)
+
+      Get("/") ~> akkaHttpSecurity.withAuthentication() { _ => complete("problem!") } ~> check {
+        status shouldEqual StatusCodes.OK
+        responseAs[String] shouldBe "called!"
+      }
     }
   }
 
