@@ -1,6 +1,6 @@
 package com.stackstate.pac4j
 
-import org.pac4j.core.context.{Cookie, WebContext}
+import org.pac4j.core.context.{ Cookie, WebContext }
 
 class AkkaHttpWebContext extends WebContext {
 
