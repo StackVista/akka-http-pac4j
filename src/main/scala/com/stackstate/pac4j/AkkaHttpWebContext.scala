@@ -1,7 +1,5 @@
 package com.stackstate.pac4j
 
-import java.util
-
 import akka.http.scaladsl.model.HttpRequest
 import org.pac4j.core.context.{ Cookie, WebContext }
 import scala.collection.JavaConverters._
@@ -15,7 +13,7 @@ case class AkkaHttpWebContext(request: HttpRequest) extends WebContext {
 
   private var changes = ResponseChanges.empty
 
-  override def getRequestCookies: util.Collection[Cookie] = {
+  override def getRequestCookies: java.util.Collection[Cookie] = {
     request.cookies.map { akkaCookie =>
       new Cookie(akkaCookie.name, akkaCookie.value)
     }.asJavaCollection
@@ -35,7 +33,7 @@ case class AkkaHttpWebContext(request: HttpRequest) extends WebContext {
     changes = changes.copy(headers = changes.headers ++ List((name, value)))
   }
 
-  override def getRequestParameters: util.Map[String, Array[String]] = {
+  override def getRequestParameters: java.util.Map[String, Array[String]] = {
     request.getUri().query().toMap.asScala.mapValues(Array(_)).asJava
   }
 
