@@ -13,7 +13,7 @@ lazy val root = (project in file(".")).
       akkaStreams,
       pac4j,
       scalaTestCore % Test,
-      scalacheck % Test,
+      scalacheck % Test
     ),
       scalacOptions ++= Seq(
   "-deprecation",           
