@@ -13,10 +13,13 @@ case class AkkaHttpWebContext(request: HttpRequest, formFields: Seq[(String, Str
   import com.stackstate.pac4j.AkkaHttpWebContext._
 
   private var changes = ResponseChanges.empty
+
+  //Only compute the request cookies once
   private lazy val requestCookies = request.cookies.map { akkaCookie =>
     new Cookie(akkaCookie.name, akkaCookie.value)
   }.asJavaCollection
 
+  //Request parameters are composed of form fields and the query part of the uri. Stored in a lazy val in order to only compute it once
   private lazy val requestParameters = formFields.toMap ++ request.getUri().query().toMap.asScala
 
   override def getRequestCookies: java.util.Collection[Cookie] = requestCookies

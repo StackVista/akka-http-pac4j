@@ -30,7 +30,7 @@ object AkkaHttpSecurity {
   def authorize(authorizer: Authorizer[CommonProfile])(request: AuthenticatedRequest): Directive0 =
     akkaHttpAuthorize(authorizer.isAuthorized(request.webContext, request.profiles.asJava))
 
-  private def mapCookie(cookie: Cookie): HttpCookie = {
+  private def toAkkaHttpCookie(cookie: Cookie): HttpCookie = {
     HttpCookie(
       name = cookie.getName,
       value = cookie.getValue,
@@ -53,7 +53,7 @@ object AkkaHttpSecurity {
           }
         })
 
-    val cookieHeaders: List[HttpHeader] = changes.cookies.map(mapCookie).map(v => `Set-Cookie`(v))
+    val cookieHeaders: List[HttpHeader] = changes.cookies.map(toAkkaHttpCookie).map(v => `Set-Cookie`(v))
     val additionalHeaders: immutable.Seq[HttpHeader] = regularHeaders ++ cookieHeaders
 
     httpResponse.mapHeaders(additionalHeaders ++ _)
@@ -84,12 +84,18 @@ class AkkaHttpSecurity[P <: CommonProfile](config: Config)(implicit val executio
   def withAuthentication(
                clients: String = null /* Default null, meaning all defined clients */ ,
                multiProfile: Boolean = true,
-               enforceFormEncoding: Boolean = false,
+               enforceFormEncoding: Boolean = false, //Force form parameters to be passed for authentication or the request fails
              ): Directive1[AuthenticatedRequest] =
     new Directive1[AuthenticatedRequest] {
       override def tapply(innerRoute: Tuple1[AuthenticatedRequest] => Route): Route = { ctx =>
         import ctx.materializer
 
+        /**
+          * First try to extract authentication credentials from form parameters using Akka's StrictForm unmarshallers.
+          * If that fails, either form encoding is enforced, in which case the request fails, or the request proceeds.
+          * If the request proceeds, other ways (e.g. basic auth) are assumed to be configured in pac4j in order to pass
+          * credentials.
+          */
         Unmarshal(ctx.request.entity).to[StrictForm].fast.flatMap { form =>
           val fields = form.fields.collect {
             case (name, field) if name.nonEmpty =>

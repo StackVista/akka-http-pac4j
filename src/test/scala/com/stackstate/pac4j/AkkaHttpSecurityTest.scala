@@ -184,7 +184,7 @@ class AkkaHttpSecurityTest extends WordSpecLike with Matchers with ScalatestRout
       }
     }
 
-    "failed a request when no parameters exist in a form and enforceFormEncoding is enabled" in {
+    "fail a request when no parameters exist in a form and enforceFormEncoding is enabled" in {
       val config = new Config()
 
       config.setSecurityLogic(new AkkaHttpSecurityLogic {
