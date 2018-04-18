@@ -9,13 +9,15 @@ import scala.collection.JavaConverters._
  * The AkkaHttpWebContext is responsible for wrapping an HTTP request and stores changes that are produced by pac4j and
  * need to be applied to an HTTP response.
  */
-case class AkkaHttpWebContext(request: HttpRequest) extends WebContext {
+case class AkkaHttpWebContext(request: HttpRequest, formFields: Seq[(String, String)] = Seq.empty) extends WebContext {
   import com.stackstate.pac4j.AkkaHttpWebContext._
 
   private var changes = ResponseChanges.empty
   private lazy val requestCookies = request.cookies.map { akkaCookie =>
     new Cookie(akkaCookie.name, akkaCookie.value)
   }.asJavaCollection
+
+  private lazy val requestParameters = formFields.toMap ++ request.getUri().query().toMap.asScala
 
   override def getRequestCookies: java.util.Collection[Cookie] = requestCookies
 
@@ -34,7 +36,7 @@ case class AkkaHttpWebContext(request: HttpRequest) extends WebContext {
   }
 
   override def getRequestParameters: java.util.Map[String, Array[String]] = {
-    request.getUri().query().toMap.asScala.mapValues(Array(_)).asJava
+    requestParameters.mapValues(Array(_)).asJava
   }
 
   override def getFullRequestURL: String = {
@@ -49,15 +51,13 @@ case class AkkaHttpWebContext(request: HttpRequest) extends WebContext {
     ContentType.parse(contentType) match {
       case Right(ct) =>
         changes = changes.copy(contentType = ct)
-      case Left(_) => //TODO: Proper logging
-        ()
+      case Left(_) =>
+        throw new IllegalArgumentException("Invalid response content type " + contentType)
     }
   }
 
   override def writeResponseContent(content: String): Unit = {
-    if (content != null) {
-      changes = changes.copy(content = changes.content + content)
-    } else ()
+    Option(content).foreach(cont => changes = changes.copy(content = changes.content + cont))
   }
 
   override def getPath: String = {
@@ -67,7 +67,7 @@ case class AkkaHttpWebContext(request: HttpRequest) extends WebContext {
   override def setResponseStatus(code: Int): Unit = ()
 
   override def getRequestParameter(name: String): String = {
-    request.getUri().query().getOrElse(name, "")
+    requestParameters.getOrElse(name, "")
   }
 
   override def getRequestHeader(name: String): String = {

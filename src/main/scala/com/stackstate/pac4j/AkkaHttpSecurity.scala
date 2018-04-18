@@ -2,24 +2,26 @@ package com.stackstate.pac4j
 
 import java.util
 
-import akka.http.scaladsl.model.HttpHeader.ParsingResult.{ Error, Ok }
-import akka.http.scaladsl.model.{ HttpHeader, HttpResponse }
-import akka.http.scaladsl.server.Directives.{ authorize => akkaHttpAuthorize }
-import akka.http.scaladsl.server.{ Directive0, Directive1, Route, RouteResult }
+import akka.http.scaladsl.common.StrictForm
+import akka.http.scaladsl.model.HttpHeader.ParsingResult.{Error, Ok}
+import akka.http.scaladsl.model.{HttpHeader, HttpResponse}
+import akka.http.scaladsl.server.Directives.{authorize => akkaHttpAuthorize}
+import akka.http.scaladsl.server.{Directive0, Directive1, Route, RouteResult}
 import akka.http.scaladsl.model.headers._
 import akka.http.scaladsl.server.RouteResult.Complete
-import com.stackstate.pac4j.AkkaHttpSecurity.AkkaHttpSecurityLogic
+import akka.http.scaladsl.unmarshalling.Unmarshal
 import com.stackstate.pac4j.AkkaHttpWebContext.ResponseChanges
 import com.stackstate.pac4j.http.AkkaHttpActionAdapter
 import org.pac4j.core.authorization.authorizer.Authorizer
 import org.pac4j.core.config.Config
-import org.pac4j.core.engine.{ DefaultSecurityLogic, SecurityLogic }
+import org.pac4j.core.engine.{DefaultSecurityLogic, SecurityLogic}
 import org.pac4j.core.http.adapter.HttpActionAdapter
 import org.pac4j.core.profile.CommonProfile
 import org.pac4j.core.context.Cookie
+import akka.http.scaladsl.util.FastFuture._
 
 import scala.collection.JavaConverters._
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ExecutionContext, Future}
 import scala.collection.immutable
 
 object AkkaHttpSecurity {
@@ -80,17 +82,36 @@ class AkkaHttpSecurity[P <: CommonProfile](config: Config)(implicit val executio
    * this does not apply any authorization ofr filtering.
    */
   def withAuthentication(
-    clients: String = null /* Default null, meaning all defined clients */ ,
-    multiProfile: Boolean = true): Directive1[AuthenticatedRequest] =
+               clients: String = null /* Default null, meaning all defined clients */ ,
+               multiProfile: Boolean = true,
+               enforceFormEncoding: Boolean = false,
+             ): Directive1[AuthenticatedRequest] =
     new Directive1[AuthenticatedRequest] {
       override def tapply(innerRoute: Tuple1[AuthenticatedRequest] => Route): Route = { ctx =>
-        val context = AkkaHttpWebContext(ctx.request)
-        securityLogic.perform(context, config, (context: AkkaHttpWebContext, profiles: util.Collection[CommonProfile], parameters: AnyRef) => {
-          val authenticatedRequest = AuthenticatedRequest(context, profiles.asScala.toList)
-          innerRoute(Tuple1(authenticatedRequest))(ctx)
-        }, actionAdapter, clients, "", "", multiProfile).map[RouteResult] {
-          case Complete(response) => Complete(applyHeadersAndCookiesToResponse(context.getChanges)(response))
-          case rejection => rejection
+        import ctx.materializer
+
+        Unmarshal(ctx.request.entity).to[StrictForm].fast.flatMap { form =>
+          val fields = form.fields.collect {
+            case (name, field) if name.nonEmpty =>
+              Unmarshal(field).to[String].map(fieldString => (name, fieldString))
+          }
+          Future.sequence(fields)
+        }.map { fields =>
+          AkkaHttpWebContext(ctx.request, fields)
+        }.recoverWith { case e =>
+          if(enforceFormEncoding) {
+            Future.failed(e)
+          } else {
+            Future.successful(AkkaHttpWebContext(ctx.request))
+          }
+        }.flatMap { akkaWebContext =>
+          securityLogic.perform(akkaWebContext, config, (context: AkkaHttpWebContext, profiles: util.Collection[CommonProfile], parameters: AnyRef) => {
+            val authenticatedRequest = AuthenticatedRequest(context, profiles.asScala.toList)
+            innerRoute(Tuple1(authenticatedRequest))(ctx)
+          }, actionAdapter, clients, "", "", multiProfile).map[RouteResult] {
+            case Complete(response) => Complete(applyHeadersAndCookiesToResponse(akkaWebContext.getChanges)(response))
+            case rejection => rejection
+          }
         }
       }
     }

@@ -1,15 +1,15 @@
 package com.stackstate.pac4j
 
-import java.{ lang, util }
+import java.{lang, util}
 
 import akka.http.scaladsl.server.AuthorizationFailedRejection
-import akka.http.scaladsl.model.{ ContentTypes, HttpRequest, HttpResponse, StatusCodes }
+import akka.http.scaladsl.model._
 import com.stackstate.pac4j.AkkaHttpSecurity.AkkaHttpSecurityLogic
 import org.pac4j.core.config.Config
-import org.pac4j.core.engine.{ DefaultSecurityLogic, SecurityGrantedAccessAdapter }
+import org.pac4j.core.engine.{DefaultSecurityLogic, SecurityGrantedAccessAdapter}
 import org.pac4j.core.http.adapter.HttpActionAdapter
 import org.pac4j.core.context.Cookie
-import org.scalatest.{ Matchers, WordSpecLike }
+import org.scalatest.{Matchers, WordSpecLike}
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.RouteResult
 import akka.http.scaladsl.server.RouteResult.Complete
@@ -158,6 +158,51 @@ class AkkaHttpSecurityTest extends WordSpecLike with Matchers with ScalatestRout
       Get("/") ~> akkaHttpSecurity.withAuthentication() { _ => complete("problem!") } ~> check {
         status shouldEqual StatusCodes.OK
         responseAs[String] shouldBe "called!"
+      }
+    }
+
+    "get request parameters from a form" in {
+      val config = new Config()
+
+      config.setSecurityLogic(new AkkaHttpSecurityLogic {
+        override def perform(context: AkkaHttpWebContext, config: Config, securityGrantedAccessAdapter: SecurityGrantedAccessAdapter[Future[RouteResult], AkkaHttpWebContext], httpActionAdapter: HttpActionAdapter[Future[RouteResult], AkkaHttpWebContext], clients: String, authorizers: String, matchers: String, multiProfile: lang.Boolean, parameters: AnyRef*): Future[RouteResult] = {
+          context.getRequestParameter("username") shouldEqual "testuser"
+          httpActionAdapter.adapt(200, context)
+        }
+      })
+
+      val akkaHttpSecurity = new AkkaHttpSecurity[CommonProfile](config)
+
+      val postRequest = HttpRequest(
+        HttpMethods.POST,
+        "/",
+        entity = HttpEntity(ContentType(MediaTypes.`application/x-www-form-urlencoded`, HttpCharsets.`UTF-8`), "username=testuser".getBytes)
+      )
+
+      postRequest ~> akkaHttpSecurity.withAuthentication(enforceFormEncoding = true) { _ => complete("problem!") } ~> check {
+        status shouldEqual StatusCodes.OK
+      }
+    }
+
+    "failed a request when no parameters exist in a form and enforceFormEncoding is enabled" in {
+      val config = new Config()
+
+      config.setSecurityLogic(new AkkaHttpSecurityLogic {
+        override def perform(context: AkkaHttpWebContext, config: Config, securityGrantedAccessAdapter: SecurityGrantedAccessAdapter[Future[RouteResult], AkkaHttpWebContext], httpActionAdapter: HttpActionAdapter[Future[RouteResult], AkkaHttpWebContext], clients: String, authorizers: String, matchers: String, multiProfile: lang.Boolean, parameters: AnyRef*): Future[RouteResult] = {
+          fail("perform should never be called!")
+        }
+      })
+
+      val akkaHttpSecurity = new AkkaHttpSecurity[CommonProfile](config)
+
+      val postRequest = HttpRequest(
+        HttpMethods.POST,
+        "/",
+        entity = HttpEntity(ContentType(MediaTypes.`application/json`), "".getBytes)
+      )
+
+      postRequest ~> akkaHttpSecurity.withAuthentication(enforceFormEncoding = true) { _ => complete("problem!") } ~> check {
+        status shouldEqual StatusCodes.InternalServerError
       }
     }
   }

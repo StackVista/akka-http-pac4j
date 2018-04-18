@@ -19,6 +19,7 @@ object AkkaHttpActionAdapter extends HttpActionAdapter[Future[RouteResult], Akka
       case HttpConstants.FORBIDDEN => HttpResponse(Forbidden)
       case HttpConstants.OK => HttpResponse(OK, entity = HttpEntity.apply(context.getContentType, context.getResponseContent.getBytes))
       case HttpConstants.NO_CONTENT => HttpResponse(NoContent)
+      case 500 => HttpResponse(InternalServerError)
     }))
   }
 }

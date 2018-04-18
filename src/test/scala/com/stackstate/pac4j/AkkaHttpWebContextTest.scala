@@ -72,6 +72,11 @@ class AkkaHttpWebContextTest extends WordSpecLike with Matchers {
     "know if a url is secure" in withContext(scheme = "https") { webContext =>
       webContext.isSecure shouldEqual true
     }
+
+    "return form fields in the request parameters" in withContext(formFields = Seq(("username", "testuser"))) { webContext =>
+      webContext.getRequestParameters.containsKey("username") shouldEqual true
+      webContext.getRequestParameter("username") shouldEqual "testuser"
+    }
   }
 
   def withContext(
@@ -80,12 +85,13 @@ class AkkaHttpWebContextTest extends WordSpecLike with Matchers {
     url: String = "",
     scheme: String = "http",
     hostAddress: String = "",
-    hostPort: Int = 0)(f: AkkaHttpWebContext => Unit): Unit = {
+    hostPort: Int = 0,
+    formFields: Seq[(String, String)] = Seq.empty)(f: AkkaHttpWebContext => Unit): Unit = {
     val parsedHeaders: List[HttpHeader] = requestHeaders.map { case (k, v) => HttpHeader.parse(k, v) }.collect { case Ok(header, _) => header }
     val completeHeaders: List[HttpHeader] = parsedHeaders ++ cookies
     val uri = Uri(url).withScheme(scheme).withAuthority(hostAddress, hostPort)
     val request = HttpRequest(uri = uri, headers = completeHeaders)
 
-    f(AkkaHttpWebContext(request))
+    f(AkkaHttpWebContext(request, formFields))
   }
 }
