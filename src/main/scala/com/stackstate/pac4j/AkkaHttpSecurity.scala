@@ -29,8 +29,6 @@ object AkkaHttpSecurity {
   def authorize(authorizer: Authorizer[CommonProfile])(request: AuthenticatedRequest): Directive0 =
     akkaHttpAuthorize(authorizer.isAuthorized(request.webContext, request.profiles.asJava))
 
-
-
   private def applyHeadersAndCookiesToResponse(changes: ResponseChanges)(httpResponse: HttpResponse): HttpResponse = {
     val regularHeaders: List[HttpHeader] = changes.headers
     val cookieHeaders: List[HttpHeader] = changes.cookies.map(v => `Set-Cookie`(v))
