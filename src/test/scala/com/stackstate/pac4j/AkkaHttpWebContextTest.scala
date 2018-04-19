@@ -66,7 +66,7 @@ class AkkaHttpWebContextTest extends WordSpecLike with Matchers {
 
     "get/set content type" in withContext() { webContext =>
       webContext.setResponseContentType("application/json")
-      webContext.getContentType shouldEqual ContentTypes.`application/json`
+      webContext.getContentType shouldEqual Some(ContentTypes.`application/json`)
     }
 
     "know if a url is secure" in withContext(scheme = "https") { webContext =>

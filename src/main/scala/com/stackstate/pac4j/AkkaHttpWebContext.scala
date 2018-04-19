@@ -1,7 +1,9 @@
 package com.stackstate.pac4j
 
-import akka.http.scaladsl.model.{ ContentType, ContentTypes, HttpRequest }
-import org.pac4j.core.context.{ Cookie, WebContext }
+import akka.http.scaladsl.model.HttpHeader.ParsingResult.{Error, Ok}
+import akka.http.scaladsl.model.headers.HttpCookie
+import akka.http.scaladsl.model.{ContentType, HttpHeader, HttpRequest}
+import org.pac4j.core.context.{Cookie, WebContext}
 
 import scala.collection.JavaConverters._
 
@@ -9,7 +11,7 @@ import scala.collection.JavaConverters._
  * The AkkaHttpWebContext is responsible for wrapping an HTTP request and stores changes that are produced by pac4j and
  * need to be applied to an HTTP response.
  */
-case class AkkaHttpWebContext(request: HttpRequest, formFields: Seq[(String, String)] = Seq.empty) extends WebContext {
+case class AkkaHttpWebContext(request: HttpRequest, formFields: Seq[(String, String)]) extends WebContext {
   import com.stackstate.pac4j.AkkaHttpWebContext._
 
   private var changes = ResponseChanges.empty
@@ -24,8 +26,22 @@ case class AkkaHttpWebContext(request: HttpRequest, formFields: Seq[(String, Str
 
   override def getRequestCookies: java.util.Collection[Cookie] = requestCookies
 
+  private def toAkkaHttpCookie(cookie: Cookie): HttpCookie = {
+    HttpCookie(
+      name = cookie.getName,
+      value = cookie.getValue,
+      expires = None,
+      maxAge = if (cookie.getMaxAge < 0) None else Some(cookie.getMaxAge),
+      domain = Option(cookie.getDomain),
+      path = Option(cookie.getPath),
+      secure = cookie.isSecure,
+      httpOnly = cookie.isHttpOnly,
+      extension = None)
+  }
+
   override def addResponseCookie(cookie: Cookie): Unit = {
-    changes = changes.copy(cookies = changes.cookies ++ List(cookie))
+    val httpCookie = toAkkaHttpCookie(cookie)
+    changes = changes.copy(cookies = changes.cookies ++ List(httpCookie))
   }
 
   override def getSessionStore = ???
@@ -35,7 +51,12 @@ case class AkkaHttpWebContext(request: HttpRequest, formFields: Seq[(String, Str
   }
 
   override def setResponseHeader(name: String, value: String): Unit = {
-    changes = changes.copy(headers = changes.headers ++ List((name, value)))
+    val header = HttpHeader.parse(name, value) match {
+      case Ok(h, _) => h
+      case Error(error) => throw new IllegalArgumentException(s"Error parsing http header ${error.formatPretty}")
+    }
+
+    changes = changes.copy(headers = changes.headers ++ List(header))
   }
 
   override def getRequestParameters: java.util.Map[String, Array[String]] = {
@@ -53,7 +74,7 @@ case class AkkaHttpWebContext(request: HttpRequest, formFields: Seq[(String, Str
   override def setResponseContentType(contentType: String): Unit = {
     ContentType.parse(contentType) match {
       case Right(ct) =>
-        changes = changes.copy(contentType = ct)
+        changes = changes.copy(contentType = Some(ct))
       case Left(_) =>
         throw new IllegalArgumentException("Invalid response content type " + contentType)
     }
@@ -107,7 +128,7 @@ case class AkkaHttpWebContext(request: HttpRequest, formFields: Seq[(String, Str
     changes.content
   }
 
-  def getContentType: ContentType = {
+  def getContentType: Option[ContentType] = {
     changes.contentType
   }
 
@@ -118,15 +139,15 @@ object AkkaHttpWebContext {
 
   //This class is where all the HTTP response changes are stored so that they can later be applied to an HTTP Request
   case class ResponseChanges private (
-    headers: List[(String, String)],
-    contentType: ContentType,
-    content: String,
-    cookies: List[Cookie],
-    attributes: Map[String, AnyRef])
+                                       headers: List[HttpHeader],
+                                       contentType: Option[ContentType],
+                                       content: String,
+                                       cookies: List[HttpCookie],
+                                       attributes: Map[String, AnyRef])
 
   object ResponseChanges {
     def empty: ResponseChanges = {
-      ResponseChanges(List.empty, ContentTypes.`text/plain(UTF-8)`, "", List.empty, Map.empty)
+      ResponseChanges(List.empty, None, "", List.empty, Map.empty)
     }
   }
 

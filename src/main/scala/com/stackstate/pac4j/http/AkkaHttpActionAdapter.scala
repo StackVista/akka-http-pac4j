@@ -13,13 +13,22 @@ import scala.concurrent.Future
 object AkkaHttpActionAdapter extends HttpActionAdapter[Future[RouteResult], AkkaHttpWebContext] {
   override def adapt(code: Int, context: AkkaHttpWebContext) = {
     Future.successful(Complete(code match {
-      case HttpConstants.UNAUTHORIZED => HttpResponse(Unauthorized)
-      case HttpConstants.BAD_REQUEST => HttpResponse(BadRequest)
-      case HttpConstants.CREATED => HttpResponse(Created)
-      case HttpConstants.FORBIDDEN => HttpResponse(Forbidden)
-      case HttpConstants.OK => HttpResponse(OK, entity = HttpEntity.apply(context.getContentType, context.getResponseContent.getBytes))
-      case HttpConstants.NO_CONTENT => HttpResponse(NoContent)
-      case 500 => HttpResponse(InternalServerError)
+      case HttpConstants.UNAUTHORIZED =>
+        HttpResponse(Unauthorized)
+      case HttpConstants.BAD_REQUEST =>
+        HttpResponse(BadRequest)
+      case HttpConstants.CREATED =>
+        HttpResponse(Created)
+      case HttpConstants.FORBIDDEN =>
+        HttpResponse(Forbidden)
+      case HttpConstants.OK =>
+        val contentBytes = context.getResponseContent.getBytes
+        val entity = context.getContentType.map(ct => HttpEntity(ct, contentBytes)).getOrElse(HttpEntity(contentBytes))
+        HttpResponse(OK, entity = entity)
+      case HttpConstants.NO_CONTENT =>
+        HttpResponse(NoContent)
+      case 500 =>
+        HttpResponse(InternalServerError)
     }))
   }
 }

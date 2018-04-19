@@ -3,8 +3,7 @@ package com.stackstate.pac4j
 import java.util
 
 import akka.http.scaladsl.common.StrictForm
-import akka.http.scaladsl.model.HttpHeader.ParsingResult.{Error, Ok}
-import akka.http.scaladsl.model.{HttpHeader, HttpResponse}
+import akka.http.scaladsl.model.{HttpEntity, HttpHeader, HttpResponse}
 import akka.http.scaladsl.server.Directives.{authorize => akkaHttpAuthorize}
 import akka.http.scaladsl.server.{Directive0, Directive1, Route, RouteResult}
 import akka.http.scaladsl.model.headers._
@@ -17,8 +16,8 @@ import org.pac4j.core.config.Config
 import org.pac4j.core.engine.{DefaultSecurityLogic, SecurityLogic}
 import org.pac4j.core.http.adapter.HttpActionAdapter
 import org.pac4j.core.profile.CommonProfile
-import org.pac4j.core.context.Cookie
 import akka.http.scaladsl.util.FastFuture._
+import akka.stream.Materializer
 
 import scala.collection.JavaConverters._
 import scala.concurrent.{ExecutionContext, Future}
@@ -30,33 +29,36 @@ object AkkaHttpSecurity {
   def authorize(authorizer: Authorizer[CommonProfile])(request: AuthenticatedRequest): Directive0 =
     akkaHttpAuthorize(authorizer.isAuthorized(request.webContext, request.profiles.asJava))
 
-  private def toAkkaHttpCookie(cookie: Cookie): HttpCookie = {
-    HttpCookie(
-      name = cookie.getName,
-      value = cookie.getValue,
-      expires = None,
-      maxAge = if (cookie.getMaxAge < 0) None else Some(cookie.getMaxAge),
-      domain = Option(cookie.getDomain),
-      path = Option(cookie.getPath),
-      secure = cookie.isSecure,
-      httpOnly = cookie.isHttpOnly,
-      extension = None)
-  }
+
 
   private def applyHeadersAndCookiesToResponse(changes: ResponseChanges)(httpResponse: HttpResponse): HttpResponse = {
-    val regularHeaders: List[HttpHeader] =
-      changes.headers
-        .map({
-          case (name, value) => HttpHeader.parse(name, value) match {
-            case Ok(header, _) => header
-            case Error(error) => throw new IllegalArgumentException(s"Error parsing http header ${error.formatPretty}")
-          }
-        })
-
-    val cookieHeaders: List[HttpHeader] = changes.cookies.map(toAkkaHttpCookie).map(v => `Set-Cookie`(v))
+    val regularHeaders: List[HttpHeader] = changes.headers
+    val cookieHeaders: List[HttpHeader] = changes.cookies.map(v => `Set-Cookie`(v))
     val additionalHeaders: immutable.Seq[HttpHeader] = regularHeaders ++ cookieHeaders
 
     httpResponse.mapHeaders(additionalHeaders ++ _)
+  }
+
+  /**
+    * Try to extract authentication credentials from form parameters using Akka's StrictForm unmarshallers.
+    * If that fails, either form encoding is enforced, in which case the request fails, or the request proceeds.
+    * If the request proceeds, other ways (e.g. basic auth) are assumed to be configured in pac4j in order to pass
+    * credentials.
+    */
+  private def getFormFields(entity: HttpEntity, enforceFormEncoding: Boolean)(implicit materializer: Materializer, executionContext: ExecutionContext): Future[Seq[(String, String)]] = {
+    Unmarshal(entity).to[StrictForm].fast.flatMap { form =>
+      val fields = form.fields.collect {
+        case (name, field) if name.nonEmpty =>
+          Unmarshal(field).to[String].map(fieldString => (name, fieldString))
+      }
+      Future.sequence(fields)
+    }.recoverWith { case e =>
+      if (enforceFormEncoding) {
+        Future.failed(e)
+      } else {
+        Future.successful(Seq.empty)
+      }
+    }
   }
 }
 
@@ -90,27 +92,8 @@ class AkkaHttpSecurity[P <: CommonProfile](config: Config)(implicit val executio
       override def tapply(innerRoute: Tuple1[AuthenticatedRequest] => Route): Route = { ctx =>
         import ctx.materializer
 
-        /**
-          * First try to extract authentication credentials from form parameters using Akka's StrictForm unmarshallers.
-          * If that fails, either form encoding is enforced, in which case the request fails, or the request proceeds.
-          * If the request proceeds, other ways (e.g. basic auth) are assumed to be configured in pac4j in order to pass
-          * credentials.
-          */
-        Unmarshal(ctx.request.entity).to[StrictForm].fast.flatMap { form =>
-          val fields = form.fields.collect {
-            case (name, field) if name.nonEmpty =>
-              Unmarshal(field).to[String].map(fieldString => (name, fieldString))
-          }
-          Future.sequence(fields)
-        }.map { fields =>
-          AkkaHttpWebContext(ctx.request, fields)
-        }.recoverWith { case e =>
-          if(enforceFormEncoding) {
-            Future.failed(e)
-          } else {
-            Future.successful(AkkaHttpWebContext(ctx.request))
-          }
-        }.flatMap { akkaWebContext =>
+        getFormFields(ctx.request.entity, enforceFormEncoding).flatMap { formParams =>
+          val akkaWebContext = AkkaHttpWebContext(ctx.request, formParams)
           securityLogic.perform(akkaWebContext, config, (context: AkkaHttpWebContext, profiles: util.Collection[CommonProfile], parameters: AnyRef) => {
             val authenticatedRequest = AuthenticatedRequest(context, profiles.asScala.toList)
             innerRoute(Tuple1(authenticatedRequest))(ctx)

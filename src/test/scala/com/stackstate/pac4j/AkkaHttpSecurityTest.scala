@@ -210,7 +210,7 @@ class AkkaHttpSecurityTest extends WordSpecLike with Matchers with ScalatestRout
   "AkkaHttpSecurity.authorize" should {
     "pass the provided authenticationRequest to the authorizer" in {
       val profile = new CommonProfile()
-      val context = AkkaHttpWebContext(HttpRequest())
+      val context = AkkaHttpWebContext(HttpRequest(), Seq.empty)
 
       val route =
         AkkaHttpSecurity.authorize((context: WebContext, profiles: util.List[CommonProfile]) => {
@@ -225,7 +225,7 @@ class AkkaHttpSecurityTest extends WordSpecLike with Matchers with ScalatestRout
     }
 
     "reject when authorization fails" in {
-      val context = AkkaHttpWebContext(HttpRequest())
+      val context = AkkaHttpWebContext(HttpRequest(), Seq.empty)
 
       val route =
         AkkaHttpSecurity.authorize((context: WebContext, profiles: util.List[CommonProfile]) => {
@@ -238,7 +238,7 @@ class AkkaHttpSecurityTest extends WordSpecLike with Matchers with ScalatestRout
     }
 
     "succeed when authorization succeeded" in {
-      val context = AkkaHttpWebContext(HttpRequest())
+      val context = AkkaHttpWebContext(HttpRequest(), Seq.empty)
 
       val route =
         AkkaHttpSecurity.authorize((context: WebContext, profiles: util.List[CommonProfile]) => {
