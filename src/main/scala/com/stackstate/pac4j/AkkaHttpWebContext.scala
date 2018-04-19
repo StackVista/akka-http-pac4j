@@ -1,25 +1,47 @@
 package com.stackstate.pac4j
 
-import akka.http.scaladsl.model.HttpRequest
-import org.pac4j.core.context.{ Cookie, WebContext }
+import akka.http.scaladsl.model.HttpHeader.ParsingResult.{Error, Ok}
+import akka.http.scaladsl.model.headers.HttpCookie
+import akka.http.scaladsl.model.{ContentType, HttpHeader, HttpRequest}
+import org.pac4j.core.context.{Cookie, WebContext}
+
 import scala.collection.JavaConverters._
 
 /**
  * The AkkaHttpWebContext is responsible for wrapping an HTTP request and stores changes that are produced by pac4j and
  * need to be applied to an HTTP response.
  */
-case class AkkaHttpWebContext(request: HttpRequest) extends WebContext {
+case class AkkaHttpWebContext(request: HttpRequest, formFields: Seq[(String, String)]) extends WebContext {
   import com.stackstate.pac4j.AkkaHttpWebContext._
 
   private var changes = ResponseChanges.empty
+
+  //Only compute the request cookies once
   private lazy val requestCookies = request.cookies.map { akkaCookie =>
     new Cookie(akkaCookie.name, akkaCookie.value)
   }.asJavaCollection
 
+  //Request parameters are composed of form fields and the query part of the uri. Stored in a lazy val in order to only compute it once
+  private lazy val requestParameters = formFields.toMap ++ request.getUri().query().toMap.asScala
+
   override def getRequestCookies: java.util.Collection[Cookie] = requestCookies
 
+  private def toAkkaHttpCookie(cookie: Cookie): HttpCookie = {
+    HttpCookie(
+      name = cookie.getName,
+      value = cookie.getValue,
+      expires = None,
+      maxAge = if (cookie.getMaxAge < 0) None else Some(cookie.getMaxAge),
+      domain = Option(cookie.getDomain),
+      path = Option(cookie.getPath),
+      secure = cookie.isSecure,
+      httpOnly = cookie.isHttpOnly,
+      extension = None)
+  }
+
   override def addResponseCookie(cookie: Cookie): Unit = {
-    changes = changes.copy(cookies = changes.cookies ++ List(cookie))
+    val httpCookie = toAkkaHttpCookie(cookie)
+    changes = changes.copy(cookies = changes.cookies ++ List(httpCookie))
   }
 
   override def getSessionStore = ???
@@ -29,11 +51,16 @@ case class AkkaHttpWebContext(request: HttpRequest) extends WebContext {
   }
 
   override def setResponseHeader(name: String, value: String): Unit = {
-    changes = changes.copy(headers = changes.headers ++ List((name, value)))
+    val header = HttpHeader.parse(name, value) match {
+      case Ok(h, _) => h
+      case Error(error) => throw new IllegalArgumentException(s"Error parsing http header ${error.formatPretty}")
+    }
+
+    changes = changes.copy(headers = changes.headers ++ List(header))
   }
 
   override def getRequestParameters: java.util.Map[String, Array[String]] = {
-    request.getUri().query().toMap.asScala.mapValues(Array(_)).asJava
+    requestParameters.mapValues(Array(_)).asJava
   }
 
   override def getFullRequestURL: String = {
@@ -45,13 +72,16 @@ case class AkkaHttpWebContext(request: HttpRequest) extends WebContext {
   }
 
   override def setResponseContentType(contentType: String): Unit = {
-    changes = changes.copy(contentType = contentType)
+    ContentType.parse(contentType) match {
+      case Right(ct) =>
+        changes = changes.copy(contentType = Some(ct))
+      case Left(_) =>
+        throw new IllegalArgumentException("Invalid response content type " + contentType)
+    }
   }
 
   override def writeResponseContent(content: String): Unit = {
-    if (content != null) {
-      changes = changes.copy(content = changes.content + content)
-    } else ()
+    Option(content).foreach(cont => changes = changes.copy(content = changes.content + cont))
   }
 
   override def getPath: String = {
@@ -61,7 +91,7 @@ case class AkkaHttpWebContext(request: HttpRequest) extends WebContext {
   override def setResponseStatus(code: Int): Unit = ()
 
   override def getRequestParameter(name: String): String = {
-    request.getUri().query().getOrElse(name, "")
+    requestParameters.getOrElse(name, "")
   }
 
   override def getRequestHeader(name: String): String = {
@@ -94,22 +124,30 @@ case class AkkaHttpWebContext(request: HttpRequest) extends WebContext {
     changes.attributes.getOrElse(name, "")
   }
 
+  def getResponseContent: String = {
+    changes.content
+  }
+
+  def getContentType: Option[ContentType] = {
+    changes.contentType
+  }
+
   def getChanges: ResponseChanges = changes
 }
 
 object AkkaHttpWebContext {
 
   //This class is where all the HTTP response changes are stored so that they can later be applied to an HTTP Request
-  case class ResponseChanges private(
-    headers: List[(String, String)],
-    contentType: String,
-    content: String,
-    cookies: List[Cookie],
-    attributes: Map[String, AnyRef])
+  case class ResponseChanges private (
+                                       headers: List[HttpHeader],
+                                       contentType: Option[ContentType],
+                                       content: String,
+                                       cookies: List[HttpCookie],
+                                       attributes: Map[String, AnyRef])
 
   object ResponseChanges {
     def empty: ResponseChanges = {
-      ResponseChanges(List.empty, "", "", List.empty, Map.empty)
+      ResponseChanges(List.empty, None, "", List.empty, Map.empty)
     }
   }
 

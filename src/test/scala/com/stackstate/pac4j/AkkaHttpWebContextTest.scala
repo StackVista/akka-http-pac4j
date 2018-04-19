@@ -2,8 +2,9 @@ package com.stackstate.pac4j
 
 import akka.http.scaladsl.model.HttpHeader.ParsingResult.Ok
 import akka.http.scaladsl.model.headers.Cookie
-import akka.http.scaladsl.model.{ HttpHeader, HttpRequest, Uri }
+import akka.http.scaladsl.model.{ ContentTypes, HttpHeader, HttpRequest, Uri }
 import org.scalatest.{ Matchers, WordSpecLike }
+
 import scala.collection.JavaConverters._
 
 class AkkaHttpWebContextTest extends WordSpecLike with Matchers {
@@ -60,11 +61,21 @@ class AkkaHttpWebContextTest extends WordSpecLike with Matchers {
 
     "get/set response content" in withContext() { webContext =>
       webContext.writeResponseContent("content")
-      webContext.getChanges.content shouldEqual "content"
+      webContext.getResponseContent shouldEqual "content"
+    }
+
+    "get/set content type" in withContext() { webContext =>
+      webContext.setResponseContentType("application/json")
+      webContext.getContentType shouldEqual Some(ContentTypes.`application/json`)
     }
 
     "know if a url is secure" in withContext(scheme = "https") { webContext =>
       webContext.isSecure shouldEqual true
+    }
+
+    "return form fields in the request parameters" in withContext(formFields = Seq(("username", "testuser"))) { webContext =>
+      webContext.getRequestParameters.containsKey("username") shouldEqual true
+      webContext.getRequestParameter("username") shouldEqual "testuser"
     }
   }
 
@@ -74,12 +85,13 @@ class AkkaHttpWebContextTest extends WordSpecLike with Matchers {
     url: String = "",
     scheme: String = "http",
     hostAddress: String = "",
-    hostPort: Int = 0)(f: AkkaHttpWebContext => Unit): Unit = {
+    hostPort: Int = 0,
+    formFields: Seq[(String, String)] = Seq.empty)(f: AkkaHttpWebContext => Unit): Unit = {
     val parsedHeaders: List[HttpHeader] = requestHeaders.map { case (k, v) => HttpHeader.parse(k, v) }.collect { case Ok(header, _) => header }
     val completeHeaders: List[HttpHeader] = parsedHeaders ++ cookies
     val uri = Uri(url).withScheme(scheme).withAuthority(hostAddress, hostPort)
     val request = HttpRequest(uri = uri, headers = completeHeaders)
 
-    f(AkkaHttpWebContext(request))
+    f(AkkaHttpWebContext(request, formFields))
   }
 }
