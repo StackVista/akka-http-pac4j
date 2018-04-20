@@ -44,7 +44,7 @@ class AkkaHttpSecurityTest extends WordSpecLike with Matchers with ScalatestRout
         }
       })
 
-      val akkaHttpSecurity = new AkkaHttpSecurity[CommonProfile](config)
+      val akkaHttpSecurity = new AkkaHttpSecurity(config)
 
       Get("/") ~> akkaHttpSecurity.withAuthentication("myclients", true) { _ => complete("problem!") } ~> check {
         status shouldEqual StatusCodes.OK
@@ -62,7 +62,7 @@ class AkkaHttpSecurityTest extends WordSpecLike with Matchers with ScalatestRout
         }
       })
 
-      val akkaHttpSecurity = new AkkaHttpSecurity[CommonProfile](config)
+      val akkaHttpSecurity = new AkkaHttpSecurity(config)
       val route =
         akkaHttpSecurity.withAuthentication() { authenticated =>
           {
@@ -88,7 +88,7 @@ class AkkaHttpSecurityTest extends WordSpecLike with Matchers with ScalatestRout
         }
       })
 
-      val akkaHttpSecurity = new AkkaHttpSecurity[CommonProfile](config)
+      val akkaHttpSecurity = new AkkaHttpSecurity(config)
 
       Get("/") ~> akkaHttpSecurity.withAuthentication() { _ => complete("problem!") } ~> check {
         status shouldEqual StatusCodes.OK
@@ -100,7 +100,7 @@ class AkkaHttpSecurityTest extends WordSpecLike with Matchers with ScalatestRout
     "sets the proper defaults" in {
       val config = new Config()
 
-      val akkaHttpSecurity = new AkkaHttpSecurity[CommonProfile](config)
+      val akkaHttpSecurity = new AkkaHttpSecurity(config)
       akkaHttpSecurity.actionAdapter shouldBe AkkaHttpActionAdapter
       akkaHttpSecurity.securityLogic.getClass shouldBe classOf[DefaultSecurityLogic[_, _]]
     }
@@ -115,7 +115,7 @@ class AkkaHttpSecurityTest extends WordSpecLike with Matchers with ScalatestRout
         }
       })
 
-      val akkaHttpSecurity = new AkkaHttpSecurity[CommonProfile](config)
+      val akkaHttpSecurity = new AkkaHttpSecurity(config)
 
       Get("/") ~> akkaHttpSecurity.withAuthentication() { _ => complete("problem!") } ~> check {
         status shouldEqual StatusCodes.OK
@@ -134,7 +134,7 @@ class AkkaHttpSecurityTest extends WordSpecLike with Matchers with ScalatestRout
         }
       })
 
-      val akkaHttpSecurity = new AkkaHttpSecurity[CommonProfile](config)
+      val akkaHttpSecurity = new AkkaHttpSecurity(config)
 
       Get("/") ~> akkaHttpSecurity.withAuthentication() { _ => complete("problem!") } ~> check {
         status shouldEqual StatusCodes.OK
@@ -153,7 +153,7 @@ class AkkaHttpSecurityTest extends WordSpecLike with Matchers with ScalatestRout
         }
       })
 
-      val akkaHttpSecurity = new AkkaHttpSecurity[CommonProfile](config)
+      val akkaHttpSecurity = new AkkaHttpSecurity(config)
 
       Get("/") ~> akkaHttpSecurity.withAuthentication() { _ => complete("problem!") } ~> check {
         status shouldEqual StatusCodes.OK
@@ -171,7 +171,7 @@ class AkkaHttpSecurityTest extends WordSpecLike with Matchers with ScalatestRout
         }
       })
 
-      val akkaHttpSecurity = new AkkaHttpSecurity[CommonProfile](config)
+      val akkaHttpSecurity = new AkkaHttpSecurity(config)
 
       val postRequest = HttpRequest(
         HttpMethods.POST,
@@ -193,7 +193,7 @@ class AkkaHttpSecurityTest extends WordSpecLike with Matchers with ScalatestRout
         }
       })
 
-      val akkaHttpSecurity = new AkkaHttpSecurity[CommonProfile](config)
+      val akkaHttpSecurity = new AkkaHttpSecurity(config)
 
       val postRequest = HttpRequest(
         HttpMethods.POST,

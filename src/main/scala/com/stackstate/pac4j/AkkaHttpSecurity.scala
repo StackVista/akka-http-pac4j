@@ -60,7 +60,7 @@ object AkkaHttpSecurity {
   }
 }
 
-class AkkaHttpSecurity[P <: CommonProfile](config: Config)(implicit val executionContext: ExecutionContext) {
+class AkkaHttpSecurity(config: Config)(implicit val executionContext: ExecutionContext) {
 
   import AkkaHttpSecurity._
   // TODO: At some point this object should contain the SessionStore (when we implement that)
