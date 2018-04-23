@@ -3,6 +3,7 @@ package com.stackstate.pac4j
 import akka.http.scaladsl.model.HttpHeader.ParsingResult.{Error, Ok}
 import akka.http.scaladsl.model.headers.HttpCookie
 import akka.http.scaladsl.model.{ContentType, HttpHeader, HttpRequest}
+import com.stackstate.pac4j.http.DummySessionStore
 import org.pac4j.core.context.{Cookie, WebContext}
 
 import scala.collection.JavaConverters._
@@ -44,7 +45,8 @@ case class AkkaHttpWebContext(request: HttpRequest, formFields: Seq[(String, Str
     changes = changes.copy(cookies = changes.cookies ++ List(httpCookie))
   }
 
-  override def getSessionStore = ???
+  /// TODO: implement this properly
+  override lazy val getSessionStore = new DummySessionStore
 
   override def getRemoteAddr: String = {
     request.getUri().getHost.address()
@@ -91,11 +93,11 @@ case class AkkaHttpWebContext(request: HttpRequest, formFields: Seq[(String, Str
   override def setResponseStatus(code: Int): Unit = ()
 
   override def getRequestParameter(name: String): String = {
-    requestParameters.getOrElse(name, "")
+    requestParameters.getOrElse(name, null)
   }
 
   override def getRequestHeader(name: String): String = {
-    request.headers.find(_.name().toLowerCase() == name.toLowerCase).map(_.value).getOrElse("")
+    request.headers.find(_.name().toLowerCase() == name.toLowerCase).map(_.value).orNull
   }
 
   override def getScheme: String = {
@@ -121,7 +123,7 @@ case class AkkaHttpWebContext(request: HttpRequest, formFields: Seq[(String, Str
   }
 
   override def getRequestAttribute(name: String): AnyRef = {
-    changes.attributes.getOrElse(name, "")
+    changes.attributes.getOrElse(name, null)
   }
 
   def getResponseContent: String = {

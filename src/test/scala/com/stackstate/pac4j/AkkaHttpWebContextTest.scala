@@ -18,7 +18,7 @@ class AkkaHttpWebContextTest extends WordSpecLike with Matchers {
 
     "get a request header or an empty string when no such header exists" in withContext(requestHeaders = List(("foo", "bar"))) { webContext =>
       webContext.getRequestHeader("foo") shouldEqual "bar"
-      webContext.getRequestHeader("abc") shouldEqual ""
+      webContext.getRequestHeader("abc") shouldEqual null
     }
     "make sure request headers are case insensitive" in withContext(requestHeaders = List(("foo", "bar"))) { webContext =>
       webContext.getRequestHeader("FOO") shouldEqual "bar"
@@ -51,15 +51,17 @@ class AkkaHttpWebContextTest extends WordSpecLike with Matchers {
 
     "get the request parameters or an empty string when no such parameter exists" in withContext(url = "www.stackstate.com/views?v=1234") { webContext =>
       webContext.getRequestParameter("v") shouldEqual "1234"
-      webContext.getRequestParameter("p") shouldEqual ""
+      webContext.getRequestParameter("p") shouldEqual null
     }
 
     "get/set request attributes" in withContext() { webContext =>
       webContext.setRequestAttribute("foo", "bar")
       webContext.getRequestAttribute("foo") shouldEqual "bar"
+      webContext.getRequestAttribute("foozor") shouldEqual null
     }
 
     "get/set response content" in withContext() { webContext =>
+      webContext.getResponseContent shouldEqual ""
       webContext.writeResponseContent("content")
       webContext.getResponseContent shouldEqual "content"
     }

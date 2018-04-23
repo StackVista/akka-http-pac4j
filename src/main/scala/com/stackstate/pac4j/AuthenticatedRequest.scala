@@ -8,8 +8,11 @@ import org.pac4j.core.profile.CommonProfile
  */
 case class AuthenticatedRequest private[pac4j] (
   private[pac4j] val webContext: AkkaHttpWebContext,
-  /**
-   * Profiles can be accessed such that the user can inspect data from the authentication
-   */
+   /*
+    * Profiles can be accessed such that the user can inspect data from the authentication. Should not be empty after
+    * authentication
+    */
   val profiles: List[CommonProfile]) {
+
+  lazy val mainProfile = profiles(0)
 }
