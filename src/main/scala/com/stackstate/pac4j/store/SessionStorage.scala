@@ -18,30 +18,30 @@ trait SessionStorage {
   /**
     * Ensure existance of a session with the provided key. Returns whether the session is new
     */
-  def ensureSession(key: SessionKey): Boolean
+  def createSessionIfNeeded(sessionKey: SessionKey): Boolean
 
   /**
     * Check whether a session exists
     */
-  def sessionExists(key: SessionKey): Boolean
+  def sessionExists(sessionKey: SessionKey): Boolean
 
   /**
     * Get value stored in existing session, returns None when either the session or value cannot be found
     */
-  def getSessionValue(session: SessionKey, key: ValueKey): Option[AnyRef]
+  def getSessionValue(sessionKey: SessionKey, key: ValueKey): Option[AnyRef]
 
   /**
     * Set a value for a given session. Returns false if the session did not exist
     */
-  def setSessionValue(session: SessionKey, key: ValueKey, value: scala.AnyRef): Boolean
+  def setSessionValue(sessionKey: SessionKey, key: ValueKey, value: scala.AnyRef): Boolean
 
   /**
     * Renew a session, meaning its lifetime start from 'now'
     */
-  def renewSession(session: SessionKey): Boolean
+  def renewSession(sessionKey: SessionKey): Boolean
 
   /**
     * Destroy a session
     */
-  def destroySession(session: SessionKey): Boolean
+  def destroySession(sessionKey: SessionKey): Boolean
 }

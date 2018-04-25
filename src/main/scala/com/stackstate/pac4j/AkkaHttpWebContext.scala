@@ -33,7 +33,7 @@ case class AkkaHttpWebContext(request: HttpRequest,
 
   private def newSession() = {
     val sessionId = UUID.randomUUID().toString
-    sessionStorage.ensureSession(sessionId)
+    sessionStorage.createSessionIfNeeded(sessionId)
     sessionId
   }
 
@@ -52,7 +52,7 @@ case class AkkaHttpWebContext(request: HttpRequest,
   }
 
   private[pac4j] def trackSession(session: String) = {
-    sessionStorage.ensureSession(session)
+    sessionStorage.createSessionIfNeeded(session)
     sessionId = session
     true
   }

@@ -30,68 +30,68 @@ class InMemorySessionStorage(override val sessionLifetime: FiniteDuration) exten
     expiryQueue = nonExpired
   }
 
-  override def ensureSession(session: SessionKey): Boolean = {
+  override def createSessionIfNeeded(sessionKey: SessionKey): Boolean = {
     this.synchronized {
       expireOldSessions()
-      sessionData.get(session) match {
+      sessionData.get(sessionKey) match {
         case None =>
           val sessionTime = getTime
-          expiryQueue = expiryQueue + ExpiryRecord (sessionTime, session)
-          sessionData = sessionData + (session -> DataRecord(sessionTime, Map.empty) )
+          expiryQueue = expiryQueue + ExpiryRecord (sessionTime, sessionKey)
+          sessionData = sessionData + (sessionKey -> DataRecord(sessionTime, Map.empty) )
           true
         case Some(_) => false
       }
     }
   }
 
-  override def sessionExists(key: SessionKey): Boolean = {
+  override def sessionExists(sessionKey: SessionKey): Boolean = {
     this.synchronized {
       expireOldSessions()
-      sessionData.contains(key)
+      sessionData.contains(sessionKey)
     }
   }
 
-  override def getSessionValue(session: SessionKey, key: ValueKey): Option[AnyRef] = {
+  override def getSessionValue(sessionKey: SessionKey, key: ValueKey): Option[AnyRef] = {
     this.synchronized {
       expireOldSessions()
-      sessionData.get(session).flatMap(_.data.get(key))
+      sessionData.get(sessionKey).flatMap(_.data.get(key))
     }
   }
 
-  override def setSessionValue(session: SessionKey, key: ValueKey, value: AnyRef): Boolean = {
+  override def setSessionValue(sessionKey: SessionKey, key: ValueKey, value: AnyRef): Boolean = {
     this.synchronized {
       expireOldSessions()
-      sessionData.get(session) match {
+      sessionData.get(sessionKey) match {
         case None => false
         case Some(DataRecord(registered, data)) =>
-          sessionData = sessionData + (session -> DataRecord(registered, data + (key -> value)))
+          sessionData = sessionData + (sessionKey -> DataRecord(registered, data + (key -> value)))
           true
       }
     }
   }
 
-  override def destroySession(session: SessionKey): Boolean = {
+  override def destroySession(sessionKey: SessionKey): Boolean = {
     this.synchronized {
       expireOldSessions()
-      sessionData.get(session) match {
+      sessionData.get(sessionKey) match {
         case None => false
         case Some(data) =>
-          expiryQueue = expiryQueue - ExpiryRecord(data.registered, session)
-          sessionData = sessionData - session
+          expiryQueue = expiryQueue - ExpiryRecord(data.registered, sessionKey)
+          sessionData = sessionData - sessionKey
           true
       }
     }
   }
 
-  override def renewSession(session: SessionKey): Boolean = {
+  override def renewSession(sessionKey: SessionKey): Boolean = {
     this.synchronized {
       expireOldSessions()
-      sessionData.get(session) match {
+      sessionData.get(sessionKey) match {
         case None => false
         case Some(DataRecord(registered, data)) =>
           val now = getTime
-          sessionData = sessionData + (session -> DataRecord(now, data))
-          expiryQueue = (expiryQueue - ExpiryRecord(registered, session)) + ExpiryRecord(now, session)
+          sessionData = sessionData + (sessionKey -> DataRecord(now, data))
+          expiryQueue = (expiryQueue - ExpiryRecord(registered, sessionKey)) + ExpiryRecord(now, sessionKey)
           true
       }
     }
