@@ -15,6 +15,7 @@ import akka.http.scaladsl.server.RouteResult
 import akka.http.scaladsl.server.RouteResult.Complete
 import akka.http.scaladsl.testkit.ScalatestRouteTest
 import com.stackstate.pac4j.http.AkkaHttpActionAdapter
+import com.stackstate.pac4j.store.ForgetfulSessionStorage
 import org.pac4j.core.context.WebContext
 import org.pac4j.core.profile.CommonProfile
 
@@ -44,7 +45,7 @@ class AkkaHttpSecurityTest extends WordSpecLike with Matchers with ScalatestRout
         }
       })
 
-      val akkaHttpSecurity = new AkkaHttpSecurity(config)
+      val akkaHttpSecurity = new AkkaHttpSecurity(config, new ForgetfulSessionStorage)
 
       Get("/") ~> akkaHttpSecurity.withAuthentication("myclients", true) { _ => complete("problem!") } ~> check {
         status shouldEqual StatusCodes.OK
@@ -62,7 +63,7 @@ class AkkaHttpSecurityTest extends WordSpecLike with Matchers with ScalatestRout
         }
       })
 
-      val akkaHttpSecurity = new AkkaHttpSecurity(config)
+      val akkaHttpSecurity = new AkkaHttpSecurity(config, new ForgetfulSessionStorage)
       val route =
         akkaHttpSecurity.withAuthentication() { authenticated =>
           {
@@ -88,7 +89,7 @@ class AkkaHttpSecurityTest extends WordSpecLike with Matchers with ScalatestRout
         }
       })
 
-      val akkaHttpSecurity = new AkkaHttpSecurity(config)
+      val akkaHttpSecurity = new AkkaHttpSecurity(config, new ForgetfulSessionStorage)
 
       Get("/") ~> akkaHttpSecurity.withAuthentication() { _ => complete("problem!") } ~> check {
         status shouldEqual StatusCodes.OK
@@ -100,7 +101,7 @@ class AkkaHttpSecurityTest extends WordSpecLike with Matchers with ScalatestRout
     "sets the proper defaults" in {
       val config = new Config()
 
-      val akkaHttpSecurity = new AkkaHttpSecurity(config)
+      val akkaHttpSecurity = new AkkaHttpSecurity(config, new ForgetfulSessionStorage)
       akkaHttpSecurity.actionAdapter shouldBe AkkaHttpActionAdapter
       akkaHttpSecurity.securityLogic.getClass shouldBe classOf[DefaultSecurityLogic[_, _]]
     }
@@ -115,7 +116,7 @@ class AkkaHttpSecurityTest extends WordSpecLike with Matchers with ScalatestRout
         }
       })
 
-      val akkaHttpSecurity = new AkkaHttpSecurity(config)
+      val akkaHttpSecurity = new AkkaHttpSecurity(config, new ForgetfulSessionStorage)
 
       Get("/") ~> akkaHttpSecurity.withAuthentication() { _ => complete("problem!") } ~> check {
         status shouldEqual StatusCodes.OK
@@ -134,7 +135,7 @@ class AkkaHttpSecurityTest extends WordSpecLike with Matchers with ScalatestRout
         }
       })
 
-      val akkaHttpSecurity = new AkkaHttpSecurity(config)
+      val akkaHttpSecurity = new AkkaHttpSecurity(config, new ForgetfulSessionStorage)
 
       Get("/") ~> akkaHttpSecurity.withAuthentication() { _ => complete("problem!") } ~> check {
         status shouldEqual StatusCodes.OK
@@ -153,7 +154,7 @@ class AkkaHttpSecurityTest extends WordSpecLike with Matchers with ScalatestRout
         }
       })
 
-      val akkaHttpSecurity = new AkkaHttpSecurity(config)
+      val akkaHttpSecurity = new AkkaHttpSecurity(config, new ForgetfulSessionStorage)
 
       Get("/") ~> akkaHttpSecurity.withAuthentication() { _ => complete("problem!") } ~> check {
         status shouldEqual StatusCodes.OK
@@ -171,7 +172,7 @@ class AkkaHttpSecurityTest extends WordSpecLike with Matchers with ScalatestRout
         }
       })
 
-      val akkaHttpSecurity = new AkkaHttpSecurity(config)
+      val akkaHttpSecurity = new AkkaHttpSecurity(config, new ForgetfulSessionStorage)
 
       val postRequest = HttpRequest(
         HttpMethods.POST,
@@ -193,7 +194,7 @@ class AkkaHttpSecurityTest extends WordSpecLike with Matchers with ScalatestRout
         }
       })
 
-      val akkaHttpSecurity = new AkkaHttpSecurity(config)
+      val akkaHttpSecurity = new AkkaHttpSecurity(config, new ForgetfulSessionStorage)
 
       val postRequest = HttpRequest(
         HttpMethods.POST,
@@ -210,7 +211,7 @@ class AkkaHttpSecurityTest extends WordSpecLike with Matchers with ScalatestRout
   "AkkaHttpSecurity.authorize" should {
     "pass the provided authenticationRequest to the authorizer" in {
       val profile = new CommonProfile()
-      val context = AkkaHttpWebContext(HttpRequest(), Seq.empty)
+      val context = AkkaHttpWebContext(HttpRequest(), Seq.empty, new ForgetfulSessionStorage)
 
       val route =
         AkkaHttpSecurity.authorize((context: WebContext, profiles: util.List[CommonProfile]) => {
@@ -225,7 +226,7 @@ class AkkaHttpSecurityTest extends WordSpecLike with Matchers with ScalatestRout
     }
 
     "reject when authorization fails" in {
-      val context = AkkaHttpWebContext(HttpRequest(), Seq.empty)
+      val context = AkkaHttpWebContext(HttpRequest(), Seq.empty, new ForgetfulSessionStorage)
 
       val route =
         AkkaHttpSecurity.authorize((context: WebContext, profiles: util.List[CommonProfile]) => {
@@ -238,7 +239,7 @@ class AkkaHttpSecurityTest extends WordSpecLike with Matchers with ScalatestRout
     }
 
     "succeed when authorization succeeded" in {
-      val context = AkkaHttpWebContext(HttpRequest(), Seq.empty)
+      val context = AkkaHttpWebContext(HttpRequest(), Seq.empty, new ForgetfulSessionStorage)
 
       val route =
         AkkaHttpSecurity.authorize((context: WebContext, profiles: util.List[CommonProfile]) => {

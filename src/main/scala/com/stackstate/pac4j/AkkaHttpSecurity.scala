@@ -18,6 +18,7 @@ import org.pac4j.core.http.adapter.HttpActionAdapter
 import org.pac4j.core.profile.CommonProfile
 import akka.http.scaladsl.util.FastFuture._
 import akka.stream.Materializer
+import com.stackstate.pac4j.store.SessionStorage
 
 import scala.collection.JavaConverters._
 import scala.concurrent.{ExecutionContext, Future}
@@ -60,7 +61,7 @@ object AkkaHttpSecurity {
   }
 }
 
-class AkkaHttpSecurity(config: Config)(implicit val executionContext: ExecutionContext) {
+class AkkaHttpSecurity(config: Config, sessionStorage: SessionStorage)(implicit val executionContext: ExecutionContext) {
 
   import AkkaHttpSecurity._
   // TODO: At some point this object should contain the SessionStore (when we implement that)
@@ -91,7 +92,7 @@ class AkkaHttpSecurity(config: Config)(implicit val executionContext: ExecutionC
         import ctx.materializer
 
         getFormFields(ctx.request.entity, enforceFormEncoding).flatMap { formParams =>
-          val akkaWebContext = AkkaHttpWebContext(ctx.request, formParams)
+          val akkaWebContext = AkkaHttpWebContext(ctx.request, formParams, sessionStorage)
           securityLogic.perform(akkaWebContext, config, (context: AkkaHttpWebContext, profiles: util.Collection[CommonProfile], parameters: AnyRef) => {
             val authenticatedRequest = AuthenticatedRequest(context, profiles.asScala.toList)
             innerRoute(Tuple1(authenticatedRequest))(ctx)

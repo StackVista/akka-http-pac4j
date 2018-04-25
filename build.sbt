@@ -3,9 +3,9 @@ import Dependencies._
 lazy val root = (project in file(".")).
   settings(
     inThisBuild(List(
-      organization := "com.stackvista",
+      organization := "com.stackstate",
       scalaVersion := "2.12.4",
-      version      := "0.1.0-SNAPSHOT"
+      version      := "0.2.0-SNAPSHOT"
     )),
     name := "akka-http-pac4j",
     libraryDependencies ++= Seq(
