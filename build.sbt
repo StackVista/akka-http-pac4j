@@ -5,7 +5,7 @@ lazy val root = (project in file(".")).
     inThisBuild(List(
       organization := "com.stackvista",
       scalaVersion := "2.12.4",
-      version      := "0.1.0-SNAPSHOT"
+      version      := "0.2.0-SNAPSHOT"
     )),
     name := "akka-http-pac4j",
     libraryDependencies ++= Seq(
