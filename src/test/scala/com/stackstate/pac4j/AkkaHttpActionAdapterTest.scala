@@ -5,6 +5,7 @@ import org.scalatest.{Matchers, WordSpecLike}
 import akka.http.scaladsl.model.StatusCodes._
 import akka.util.ByteString
 import com.stackstate.pac4j.http.AkkaHttpActionAdapter
+import com.stackstate.pac4j.store.ForgetfulSessionStorage
 import org.scalatest.concurrent.ScalaFutures
 
 class AkkaHttpActionAdapterTest extends WordSpecLike with Matchers with ScalaFutures {
@@ -38,6 +39,6 @@ class AkkaHttpActionAdapterTest extends WordSpecLike with Matchers with ScalaFut
   }
   
   def withContext(f: AkkaHttpWebContext => Unit) = {
-    f(AkkaHttpWebContext(HttpRequest(), Seq.empty))
+    f(AkkaHttpWebContext(HttpRequest(), Seq.empty, new ForgetfulSessionStorage))
   }
 }
