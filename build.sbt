@@ -36,7 +36,7 @@ lazy val root = (project in file(".")).
     )
   )
 
-useGpg := true
+pgpReadOnly := false
 
 publishMavenStyle := true
 
@@ -47,3 +47,31 @@ publishTo := {
   else
     Some("releases"  at nexus + "service/local/staging/deploy/maven2")
 }
+
+pomIncludeRepository := { _ => false }
+
+licenses := Seq("BSD-style" -> url("http://www.opensource.org/licenses/bsd-license.php"))
+
+homepage := Some(url("https://github.com/StackVista/akka-http-pac4j"))
+
+scmInfo := Some(
+  ScmInfo(
+    url("https://github.com/StackVista/akka-http-pac4j"),
+    "scm:git@github.com:StackVista/akka-http-pac4j.git"
+  )
+)
+
+developers := List(
+  Developer(
+    id    = "lmreis89",
+    name  = "Luis Reis",
+    email = "lreis@stackstate.com",
+    url   = url("https://github.com/lmreis89")
+  ),
+  Developer(
+    id = "craffit",
+    name = "Bram Schuur",
+    email = "bschuur@stackstate.com",
+    url = url("https://github.com/craffit")
+  )
+)
