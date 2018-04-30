@@ -1,11 +1,14 @@
 package com.stackstate.pac4j
 
 import akka.http.scaladsl.model.HttpHeader.ParsingResult.Ok
-import akka.http.scaladsl.model.headers.Cookie
-import akka.http.scaladsl.model.{ ContentTypes, HttpHeader, HttpRequest, Uri }
-import org.scalatest.{ Matchers, WordSpecLike }
+import akka.http.scaladsl.model.headers.{Cookie, HttpCookie}
+import akka.http.scaladsl.model._
+import com.stackstate.pac4j.store.SessionStorage._
+import com.stackstate.pac4j.store.{ForgetfulSessionStorage, SessionStorage}
+import org.scalatest.{Matchers, WordSpecLike}
 
 import scala.collection.JavaConverters._
+import scala.concurrent.duration._
 
 class AkkaHttpWebContextTest extends WordSpecLike with Matchers {
   lazy val cookie = ("cookieName", "cookieValue")
@@ -79,6 +82,81 @@ class AkkaHttpWebContextTest extends WordSpecLike with Matchers {
       webContext.getRequestParameters.containsKey("username") shouldEqual true
       webContext.getRequestParameter("username") shouldEqual "testuser"
     }
+
+    "add a cookie when the session is persisted and put in the expected data" in withContext(sessionStorage = new ForgetfulSessionStorage {
+      override val sessionLifetime = 3.seconds
+      override def renewSession(session: SessionKey): Boolean = true
+    }) { webContext =>
+      webContext.getChanges.cookies.find(_.name == AkkaHttpWebContext.COOKIE_NAME) shouldBe Some(
+        HttpCookie(
+          name = AkkaHttpWebContext.COOKIE_NAME,
+          value = webContext.sessionId,
+          expires = None,
+          maxAge = Some(3),
+          domain = None,
+          path = None,
+          secure = false,
+          httpOnly = true,
+          extension  = None
+        ))
+    }
+
+    "don't add a cookie when the session was expired" in withContext(sessionStorage = new ForgetfulSessionStorage {
+      override def renewSession(session: SessionKey): Boolean = false
+    }) { webContext =>
+      webContext.getChanges.cookies.find(_.name == AkkaHttpWebContext.COOKIE_NAME) shouldBe None
+    }
+
+    "make the session cookie secure when running over https" in withContext(scheme = "https", sessionStorage = new ForgetfulSessionStorage {
+      override val sessionLifetime = 3.seconds
+      override def renewSession(session: SessionKey): Boolean = true
+    }) { webContext =>
+      webContext.getChanges.cookies.find(_.name == AkkaHttpWebContext.COOKIE_NAME).get.secure shouldBe true
+    }
+
+    "pick up the session cookie and send it back" in withContext(
+      cookies = List(Cookie(AkkaHttpWebContext.COOKIE_NAME, "my_session")),
+      sessionStorage = new ForgetfulSessionStorage {
+        override val sessionLifetime = 3.seconds
+        override def sessionExists(key: SessionKey): Boolean = true
+        override def renewSession(session: SessionKey): Boolean = true
+      }
+    ) { webContext =>
+      webContext.getChanges.cookies.find(_.name == AkkaHttpWebContext.COOKIE_NAME).isDefined shouldEqual true
+    }
+
+    "creates a new sessionId when the cookie was expired" in withContext(
+      cookies = List(Cookie(AkkaHttpWebContext.COOKIE_NAME, "my_session")),
+      sessionStorage = new ForgetfulSessionStorage {
+        override val sessionLifetime = 3.seconds
+        override def sessionExists(key: SessionKey): Boolean = false
+        override def renewSession(session: SessionKey): Boolean = true
+      }
+    ) { webContext =>
+      webContext.sessionId shouldNot equal("my_session")
+    }
+
+    "creates a new sessionId when the session was destroyed" in withContext(
+      cookies = List(Cookie(AkkaHttpWebContext.COOKIE_NAME, "my_session")),
+      sessionStorage = new ForgetfulSessionStorage {
+        override val sessionLifetime = 3.seconds
+        override def renewSession(session: SessionKey): Boolean = true
+      }
+    ) { webContext =>
+      webContext.destroySession()
+      webContext.sessionId shouldNot equal("my_session")
+    }
+
+    "stores the trackable session when requested" in withContext(
+      cookies = List(Cookie(AkkaHttpWebContext.COOKIE_NAME, "my_session")),
+      sessionStorage = new ForgetfulSessionStorage {
+        override val sessionLifetime = 3.seconds
+        override def renewSession(session: SessionKey): Boolean = true
+      }
+    ) { webContext =>
+      webContext.trackSession("my_session2")
+      webContext.sessionId shouldBe "my_session2"
+    }
   }
 
   def withContext(
@@ -88,12 +166,13 @@ class AkkaHttpWebContextTest extends WordSpecLike with Matchers {
     scheme: String = "http",
     hostAddress: String = "",
     hostPort: Int = 0,
-    formFields: Seq[(String, String)] = Seq.empty)(f: AkkaHttpWebContext => Unit): Unit = {
+    formFields: Seq[(String, String)] = Seq.empty,
+    sessionStorage: SessionStorage = new ForgetfulSessionStorage)(f: AkkaHttpWebContext => Unit): Unit = {
     val parsedHeaders: List[HttpHeader] = requestHeaders.map { case (k, v) => HttpHeader.parse(k, v) }.collect { case Ok(header, _) => header }
     val completeHeaders: List[HttpHeader] = parsedHeaders ++ cookies
     val uri = Uri(url).withScheme(scheme).withAuthority(hostAddress, hostPort)
     val request = HttpRequest(uri = uri, headers = completeHeaders)
 
-    f(AkkaHttpWebContext(request, formFields))
+    f(AkkaHttpWebContext(request, formFields, sessionStorage))
   }
 }

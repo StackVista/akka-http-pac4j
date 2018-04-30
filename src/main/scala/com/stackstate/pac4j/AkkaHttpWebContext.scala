@@ -1,18 +1,24 @@
 package com.stackstate.pac4j
 
+import java.util.UUID
+
 import akka.http.scaladsl.model.HttpHeader.ParsingResult.{Error, Ok}
 import akka.http.scaladsl.model.headers.HttpCookie
 import akka.http.scaladsl.model.{ContentType, HttpHeader, HttpRequest}
-import com.stackstate.pac4j.http.DummySessionStore
+import com.stackstate.pac4j.http.AkkaHttpSessionStore
+import com.stackstate.pac4j.store.SessionStorage
 import org.pac4j.core.context.{Cookie, WebContext}
 
 import scala.collection.JavaConverters._
 
 /**
+  *
  * The AkkaHttpWebContext is responsible for wrapping an HTTP request and stores changes that are produced by pac4j and
  * need to be applied to an HTTP response.
  */
-case class AkkaHttpWebContext(request: HttpRequest, formFields: Seq[(String, String)]) extends WebContext {
+case class AkkaHttpWebContext(request: HttpRequest,
+                              formFields: Seq[(String, String)],
+                              private[pac4j] val sessionStorage: SessionStorage) extends WebContext {
   import com.stackstate.pac4j.AkkaHttpWebContext._
 
   private var changes = ResponseChanges.empty
@@ -24,6 +30,32 @@ case class AkkaHttpWebContext(request: HttpRequest, formFields: Seq[(String, Str
 
   //Request parameters are composed of form fields and the query part of the uri. Stored in a lazy val in order to only compute it once
   private lazy val requestParameters = formFields.toMap ++ request.getUri().query().toMap.asScala
+
+  private def newSession() = {
+    val sessionId = UUID.randomUUID().toString
+    sessionStorage.createSessionIfNeeded(sessionId)
+    sessionId
+  }
+
+  private[pac4j] var sessionId: String =
+    request.cookies
+      .find(_.name == COOKIE_NAME)
+      .map(_.value)
+      .filter(session => sessionStorage.sessionExists(session))
+      .getOrElse(newSession())
+
+
+  private[pac4j] def destroySession() = {
+    sessionStorage.destroySession(sessionId)
+    sessionId = newSession()
+    true
+  }
+
+  private[pac4j] def trackSession(session: String) = {
+    sessionStorage.createSessionIfNeeded(session)
+    sessionId = session
+    true
+  }
 
   override def getRequestCookies: java.util.Collection[Cookie] = requestCookies
 
@@ -45,8 +77,7 @@ case class AkkaHttpWebContext(request: HttpRequest, formFields: Seq[(String, Str
     changes = changes.copy(cookies = changes.cookies ++ List(httpCookie))
   }
 
-  /// TODO: implement this properly
-  override lazy val getSessionStore = new DummySessionStore
+  override lazy val getSessionStore = new AkkaHttpSessionStore()
 
   override def getRemoteAddr: String = {
     request.getUri().getHost.address()
@@ -134,7 +165,17 @@ case class AkkaHttpWebContext(request: HttpRequest, formFields: Seq[(String, Str
     changes.contentType
   }
 
-  def getChanges: ResponseChanges = changes
+  def getChanges: ResponseChanges = {
+    if (sessionStorage.renewSession(sessionId)) {
+      val cookie = new Cookie(COOKIE_NAME, sessionId)
+      cookie.setSecure(isSecure)
+      cookie.setMaxAge(sessionStorage.sessionLifetime.toSeconds.toInt)
+      cookie.setHttpOnly(true)
+      addResponseCookie(cookie)
+    }
+
+    changes
+  }
 }
 
 object AkkaHttpWebContext {
@@ -153,4 +194,5 @@ object AkkaHttpWebContext {
     }
   }
 
+  private[pac4j] val COOKIE_NAME = "AkkaHttpPac4jSession"
 }
