@@ -21,6 +21,8 @@ object AkkaHttpActionAdapter extends HttpActionAdapter[Future[RouteResult], Akka
         HttpResponse(Created)
       case HttpConstants.FORBIDDEN =>
         HttpResponse(Forbidden)
+      case HttpConstants.TEMP_REDIRECT =>
+        HttpResponse(TemporaryRedirect)
       case HttpConstants.OK =>
         val contentBytes = context.getResponseContent.getBytes
         val entity = context.getContentType.map(ct => HttpEntity(ct, contentBytes)).getOrElse(HttpEntity(contentBytes))
