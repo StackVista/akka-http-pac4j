@@ -97,7 +97,7 @@ case class AkkaHttpWebContext(request: HttpRequest,
   }
 
   override def getFullRequestURL: String = {
-    request.getUri().getScheme + "://" + request.getUri().getHost.address() + request.getUri().getPathString
+    request.getUri().toString
   }
 
   override def getServerName: String = {
