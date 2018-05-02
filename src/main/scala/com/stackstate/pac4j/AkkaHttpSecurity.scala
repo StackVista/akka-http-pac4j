@@ -66,7 +66,6 @@ object AkkaHttpSecurity {
 class AkkaHttpSecurity(config: Config, sessionStorage: SessionStorage)(implicit val executionContext: ExecutionContext) {
 
   import AkkaHttpSecurity._
-  // TODO: At some point this object should contain the SessionStore (when we implement that)
 
   private[pac4j] val securityLogic: AkkaHttpSecurityLogic =
     Option(config.getSecurityLogic) match {
@@ -86,6 +85,10 @@ class AkkaHttpSecurity(config: Config, sessionStorage: SessionStorage)(implicit 
       case None => new DefaultCallbackLogic[Future[RouteResult], AkkaHttpWebContext]
     }
 
+  /**
+    * This directive constructs a pac4j context for a route. This means the request is interpreted into
+    * an AkkaHttpWebContext and any changes to this context are applied when the route returns (e.g. headers/cookies).
+    */
   private[pac4j] def withContext[A](enforceFormEncoding: Boolean): Directive1[AkkaHttpWebContext] =
     new Directive1[AkkaHttpWebContext] {
       override def tapply(innerRoute: Tuple1[AkkaHttpWebContext] => Route): Route = { ctx =>
