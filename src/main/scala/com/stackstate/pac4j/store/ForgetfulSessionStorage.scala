@@ -1,6 +1,5 @@
 package com.stackstate.pac4j.store
 
-import java.util.UUID
 import java.util.concurrent.TimeUnit
 
 import com.stackstate.pac4j.store.SessionStorage._
