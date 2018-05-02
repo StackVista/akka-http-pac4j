@@ -39,11 +39,11 @@ case class AkkaHttpWebContext(request: HttpRequest,
 
   private[pac4j] var sessionId: String =
     request.cookies
-      .find(_.name == COOKIE_NAME)
+      .filter(_.name == COOKIE_NAME)
       .map(_.value)
       .filter(session => sessionStorage.sessionExists(session))
+      .headOption
       .getOrElse(newSession())
-
 
   private[pac4j] def destroySession() = {
     sessionStorage.destroySession(sessionId)
@@ -171,6 +171,7 @@ case class AkkaHttpWebContext(request: HttpRequest,
       cookie.setSecure(isSecure)
       cookie.setMaxAge(sessionStorage.sessionLifetime.toSeconds.toInt)
       cookie.setHttpOnly(true)
+      cookie.setPath("/")
       addResponseCookie(cookie)
     }
 

@@ -102,7 +102,7 @@ class AkkaHttpWebContextTest extends WordSpecLike with Matchers {
           expires = None,
           maxAge = Some(3),
           domain = None,
-          path = None,
+          path = Some("/"),
           secure = false,
           httpOnly = true,
           extension  = None
@@ -131,6 +131,17 @@ class AkkaHttpWebContextTest extends WordSpecLike with Matchers {
       }
     ) { webContext =>
       webContext.getChanges.cookies.find(_.name == AkkaHttpWebContext.COOKIE_NAME).isDefined shouldEqual true
+    }
+
+    "pick up the session cookie from cookies that are no longer sessions" in withContext(
+      cookies = List(Cookie(AkkaHttpWebContext.COOKIE_NAME, "some_session"), Cookie(AkkaHttpWebContext.COOKIE_NAME, "my_session")),
+      sessionStorage = new ForgetfulSessionStorage {
+        override val sessionLifetime = 3.seconds
+        override def sessionExists(key: SessionKey): Boolean = key == "my_session"
+        override def renewSession(session: SessionKey): Boolean = true
+      }
+    ) { webContext =>
+      webContext.getChanges.cookies.find(_.name == AkkaHttpWebContext.COOKIE_NAME).get.value shouldEqual "my_session"
     }
 
     "creates a new sessionId when the cookie was expired" in withContext(
