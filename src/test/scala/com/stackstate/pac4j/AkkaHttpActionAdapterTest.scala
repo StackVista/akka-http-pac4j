@@ -16,8 +16,8 @@ class AkkaHttpActionAdapterTest extends WordSpecLike with Matchers with ScalaFut
     "convert 401 to Unauthorized" in withContext { context =>
       AkkaHttpActionAdapter.adapt(401, context).futureValue.response shouldEqual HttpResponse(Unauthorized)
     }
-    "convert 302 to TemporaryRedirect" in withContext { context =>
-      AkkaHttpActionAdapter.adapt(302, context).futureValue.response shouldEqual HttpResponse(TemporaryRedirect)
+    "convert 302 to SeeOther (to support login flow)" in withContext { context =>
+      AkkaHttpActionAdapter.adapt(302, context).futureValue.response shouldEqual HttpResponse(SeeOther)
     }
     "convert 400 to BadRequest" in withContext { context =>
       AkkaHttpActionAdapter.adapt(400, context).futureValue.response shouldEqual HttpResponse(BadRequest)
