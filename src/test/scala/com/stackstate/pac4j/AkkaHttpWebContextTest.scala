@@ -27,8 +27,16 @@ class AkkaHttpWebContextTest extends WordSpecLike with Matchers {
       webContext.getRequestHeader("FOO") shouldEqual "bar"
     }
 
-    "get the full url from a request" in withContext(url = "www.stackstate.com/views") { webContext =>
-      webContext.getFullRequestURL shouldEqual "http://www.stackstate.com/views"
+    "get the full url including port from a request" in withContext(url = "/views/#/something.html", hostAddress = "localhost", hostPort = 7070) { webContext =>
+      webContext.getFullRequestURL shouldEqual "http://localhost:7070/views/#/something.html"
+    }
+
+    "get the full url excluding port from a request" in withContext(url = "/views", hostAddress = "localhost") { webContext =>
+      webContext.getFullRequestURL shouldEqual "http://localhost/views"
+    }
+
+    "get the full url including query" in withContext(url = "/views.html?bla=bla&bla=bla", hostAddress = "localhost") { webContext =>
+      webContext.getFullRequestURL shouldEqual "http://localhost/views.html?bla=bla&bla=bla"
     }
 
     "get the request path" in withContext(url = "www.stackstate.com/views") { webContext =>
@@ -160,14 +168,14 @@ class AkkaHttpWebContextTest extends WordSpecLike with Matchers {
   }
 
   def withContext(
-    requestHeaders: List[(String, String)] = List.empty,
-    cookies: List[Cookie] = List.empty,
-    url: String = "",
-    scheme: String = "http",
-    hostAddress: String = "",
-    hostPort: Int = 0,
-    formFields: Seq[(String, String)] = Seq.empty,
-    sessionStorage: SessionStorage = new ForgetfulSessionStorage)(f: AkkaHttpWebContext => Unit): Unit = {
+                   requestHeaders: List[(String, String)] = List.empty,
+                   cookies: List[Cookie] = List.empty,
+                   url: String = "",
+                   scheme: String = "http",
+                   hostAddress: String = "",
+                   hostPort: Int = 0,
+                   formFields: Seq[(String, String)] = Seq.empty,
+                   sessionStorage: SessionStorage = new ForgetfulSessionStorage)(f: AkkaHttpWebContext => Unit): Unit = {
     val parsedHeaders: List[HttpHeader] = requestHeaders.map { case (k, v) => HttpHeader.parse(k, v) }.collect { case Ok(header, _) => header }
     val completeHeaders: List[HttpHeader] = parsedHeaders ++ cookies
     val uri = Uri(url).withScheme(scheme).withAuthority(hostAddress, hostPort)
