@@ -73,5 +73,11 @@ developers := List(
     name = "Bram Schuur",
     email = "bschuur@stackstate.com",
     url = url("https://github.com/craffit")
+  ),
+  Developer(
+    id = "aacevedo",
+    name = "Alejandro Acevedo",
+    email = "aacevedoosorio@gmail.com",
+    url = url("https://github.com/aacevedoosorio")
   )
 )

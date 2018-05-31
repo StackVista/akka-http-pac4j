@@ -13,7 +13,7 @@ import com.stackstate.pac4j.AkkaHttpWebContext.ResponseChanges
 import com.stackstate.pac4j.http.AkkaHttpActionAdapter
 import org.pac4j.core.authorization.authorizer.Authorizer
 import org.pac4j.core.config.Config
-import org.pac4j.core.engine.{CallbackLogic, DefaultCallbackLogic, DefaultSecurityLogic, SecurityLogic}
+import org.pac4j.core.engine._
 import org.pac4j.core.http.adapter.HttpActionAdapter
 import org.pac4j.core.profile.CommonProfile
 import akka.http.scaladsl.util.FastFuture._
@@ -28,6 +28,7 @@ import scala.collection.immutable
 object AkkaHttpSecurity {
   type AkkaHttpSecurityLogic = SecurityLogic[Future[RouteResult], AkkaHttpWebContext]
   type AkkaHttpCallbackLogic = CallbackLogic[Future[RouteResult], AkkaHttpWebContext]
+  type AkkaHttpLogoutLogic = LogoutLogic[Future[RouteResult], AkkaHttpWebContext]
 
   def authorize(authorizer: Authorizer[CommonProfile])(request: AuthenticatedRequest): Directive0 =
     akkaHttpAuthorize(authorizer.isAuthorized(request.webContext, request.profiles.asJava))
@@ -81,8 +82,14 @@ class AkkaHttpSecurity(config: Config, sessionStorage: SessionStorage)(implicit 
 
   private[pac4j] val callbackLogic: CallbackLogic[Future[RouteResult], AkkaHttpWebContext] =
     Option(config.getCallbackLogic) match {
-      case Some(v) => v.asInstanceOf[CallbackLogic[Future[RouteResult], AkkaHttpWebContext]]
+      case Some(v) => v.asInstanceOf[AkkaHttpCallbackLogic]
       case None => new DefaultCallbackLogic[Future[RouteResult], AkkaHttpWebContext]
+    }
+
+  private[pac4j] val logoutLogic: LogoutLogic[Future[RouteResult], AkkaHttpWebContext] =
+    Option(config.getLogoutLogic) match {
+      case Some(v) => v.asInstanceOf[AkkaHttpLogoutLogic]
+      case None => new DefaultLogoutLogic[Future[RouteResult], AkkaHttpWebContext]
     }
 
   /**
@@ -134,7 +141,17 @@ class AkkaHttpSecurity(config: Config, sessionStorage: SessionStorage)(implicit 
                enforceFormEncoding: Boolean = false
               ): Route = {
     withContext(enforceFormEncoding) { akkaWebContext => ctx =>
-      callbackLogic.perform(akkaWebContext, config, actionAdapter, defaultUrl, saveInSession, multiProfile, false, defaultClient.getOrElse(null))
+      callbackLogic.perform(akkaWebContext, config, actionAdapter, defaultUrl, saveInSession, multiProfile, false, defaultClient.orNull)
+    }
+  }
+
+  def logout(defaultUrl: String = Pac4jConstants.DEFAULT_URL_VALUE,
+             logoutPatternUrl: String = Pac4jConstants.DEFAULT_LOGOUT_URL_PATTERN_VALUE,
+             localLogout: Boolean = true,
+             destroySession: Boolean = true
+            ): Route = {
+    withContext(enforceFormEncoding = false) { akkaWebContext => ctx =>
+        logoutLogic.perform(akkaWebContext, config, actionAdapter, defaultUrl, logoutPatternUrl, localLogout, destroySession, false)
     }
   }
 

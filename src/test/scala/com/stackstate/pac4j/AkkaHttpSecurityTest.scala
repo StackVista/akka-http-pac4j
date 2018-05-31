@@ -4,7 +4,7 @@ import java.{lang, util}
 
 import akka.http.scaladsl.server.AuthorizationFailedRejection
 import akka.http.scaladsl.model._
-import com.stackstate.pac4j.AkkaHttpSecurity.{AkkaHttpCallbackLogic, AkkaHttpSecurityLogic}
+import com.stackstate.pac4j.AkkaHttpSecurity.{AkkaHttpCallbackLogic, AkkaHttpLogoutLogic, AkkaHttpSecurityLogic}
 import org.pac4j.core.config.Config
 import org.pac4j.core.engine.{DefaultCallbackLogic, DefaultSecurityLogic, SecurityGrantedAccessAdapter}
 import org.pac4j.core.http.adapter.HttpActionAdapter
@@ -58,7 +58,7 @@ class AkkaHttpSecurityTest extends WordSpecLike with Matchers with ScalatestRout
 
       val akkaHttpSecurity = new AkkaHttpSecurity(config, new ForgetfulSessionStorage)
 
-      Get("/") ~> akkaHttpSecurity.withAuthentication("myclients", false) { _ => complete("problem!") } ~> check {
+      Get("/") ~> akkaHttpSecurity.withAuthentication("myclients", multiProfile = false) { _ => complete("problem!") } ~> check {
         status shouldEqual StatusCodes.OK
         responseAs[String] shouldBe "called!"
       }
@@ -79,7 +79,7 @@ class AkkaHttpSecurityTest extends WordSpecLike with Matchers with ScalatestRout
         akkaHttpSecurity.withAuthentication() { authenticated =>
           {
             authenticated.profiles.size shouldBe 1
-            authenticated.profiles(0) shouldBe profile
+            authenticated.profiles.head shouldBe profile
             complete("called!")
           }
         }
@@ -173,14 +173,13 @@ class AkkaHttpSecurityTest extends WordSpecLike with Matchers with ScalatestRout
           renewSession shouldBe false
           client shouldBe "Yooo"
 
-          httpActionAdapter shouldBe actionAdapter
           Future.successful(Complete(HttpResponse(StatusCodes.OK, entity = "called!")))
         }
       })
 
       val akkaHttpSecurity = new AkkaHttpSecurity(config, new ForgetfulSessionStorage)
 
-      Get("/") ~> akkaHttpSecurity.callback("/blaat", false, false, Some("Yooo")) ~> check {
+      Get("/") ~> akkaHttpSecurity.callback("/blaat", saveInSession = false, multiProfile = false, Some("Yooo")) ~> check {
         status shouldEqual StatusCodes.OK
         responseAs[String] shouldBe "called!"
       }
@@ -230,6 +229,32 @@ class AkkaHttpSecurityTest extends WordSpecLike with Matchers with ScalatestRout
       Get("/") ~> route ~> check {
         status shouldBe StatusCodes.OK
         entityAs[String] shouldBe "cool!"
+      }
+    }
+  }
+
+  "AkkaHttpSecurity.logout" should {
+    "uses provided callbackLogic and pass the expected parameters" in {
+      val config = new Config()
+
+      config.setHttpActionAdapter(AkkaHttpActionAdapter)
+      config.setLogoutLogic(new AkkaHttpLogoutLogic {
+        override def perform(context: AkkaHttpWebContext, config: Config, httpActionAdapter: HttpActionAdapter[Future[RouteResult], AkkaHttpWebContext], defaultUrl: String, logoutUrlPattern: String, localLogout: lang.Boolean, destroySession: lang.Boolean, centralLogout: lang.Boolean): Future[RouteResult] = {
+          httpActionAdapter shouldBe AkkaHttpActionAdapter
+          defaultUrl shouldBe "/home"
+          logoutUrlPattern shouldBe "*"
+          localLogout shouldBe false
+          destroySession shouldBe false
+
+          Future.successful(Complete(HttpResponse(StatusCodes.OK, entity = "logout!")))
+        }
+      })
+
+      val akkaHttpSecurity = new AkkaHttpSecurity(config, new ForgetfulSessionStorage)
+
+      Get("/") ~> akkaHttpSecurity.logout("/home", "*", localLogout = false, destroySession = false) ~> check {
+        status shouldEqual StatusCodes.OK
+        responseAs[String] shouldBe "logout!"
       }
     }
   }

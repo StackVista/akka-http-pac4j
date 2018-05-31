@@ -41,8 +41,7 @@ case class AkkaHttpWebContext(request: HttpRequest,
     request.cookies
       .filter(_.name == COOKIE_NAME)
       .map(_.value)
-      .filter(session => sessionStorage.sessionExists(session))
-      .headOption
+      .find(session => sessionStorage.sessionExists(session))
       .getOrElse(newSession())
 
   private[pac4j] def destroySession() = {
