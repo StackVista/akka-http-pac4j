@@ -4,23 +4,25 @@ import java.{lang, util}
 
 import akka.http.scaladsl.server.AuthorizationFailedRejection
 import akka.http.scaladsl.model._
-import com.stackstate.pac4j.AkkaHttpSecurity.{AkkaHttpCallbackLogic, AkkaHttpSecurityLogic}
+import com.stackstate.pac4j.AkkaHttpSecurity.{AkkaHttpCallbackLogic, AkkaHttpLogoutLogic, AkkaHttpSecurityLogic}
 import org.pac4j.core.config.Config
-import org.pac4j.core.engine.{DefaultCallbackLogic, DefaultSecurityLogic, SecurityGrantedAccessAdapter}
 import org.pac4j.core.http.adapter.HttpActionAdapter
-import org.pac4j.core.context.Cookie
+import org.pac4j.core.context.{Cookie, Pac4jConstants, WebContext}
 import org.scalatest.{Matchers, WordSpecLike}
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.RouteResult
 import akka.http.scaladsl.server.RouteResult.Complete
 import akka.http.scaladsl.testkit.ScalatestRouteTest
 import com.stackstate.pac4j.http.AkkaHttpActionAdapter
-import com.stackstate.pac4j.store.ForgetfulSessionStorage
-import org.pac4j.core.context.WebContext
+import com.stackstate.pac4j.store.{ForgetfulSessionStorage, InMemorySessionStorage}
+import org.pac4j.core.client.{Clients, IndirectClient}
+import org.pac4j.core.credentials.UsernamePasswordCredentials
+import org.pac4j.core.engine.{DefaultCallbackLogic, DefaultLogoutLogic, DefaultSecurityLogic, SecurityGrantedAccessAdapter}
 import org.pac4j.core.profile.CommonProfile
 
 import scala.collection.JavaConverters._
 import scala.concurrent.Future
+import scala.concurrent.duration._
 
 class AkkaHttpSecurityTest extends WordSpecLike with Matchers with ScalatestRouteTest {
 
@@ -58,7 +60,7 @@ class AkkaHttpSecurityTest extends WordSpecLike with Matchers with ScalatestRout
 
       val akkaHttpSecurity = new AkkaHttpSecurity(config, new ForgetfulSessionStorage)
 
-      Get("/") ~> akkaHttpSecurity.withAuthentication("myclients", false) { _ => complete("problem!") } ~> check {
+      Get("/") ~> akkaHttpSecurity.withAuthentication("myclients", multiProfile = false) { _ => complete("problem!") } ~> check {
         status shouldEqual StatusCodes.OK
         responseAs[String] shouldBe "called!"
       }
@@ -79,7 +81,7 @@ class AkkaHttpSecurityTest extends WordSpecLike with Matchers with ScalatestRout
         akkaHttpSecurity.withAuthentication() { authenticated =>
           {
             authenticated.profiles.size shouldBe 1
-            authenticated.profiles(0) shouldBe profile
+            authenticated.profiles.head shouldBe profile
             complete("called!")
           }
         }
@@ -173,14 +175,13 @@ class AkkaHttpSecurityTest extends WordSpecLike with Matchers with ScalatestRout
           renewSession shouldBe false
           client shouldBe "Yooo"
 
-          httpActionAdapter shouldBe actionAdapter
           Future.successful(Complete(HttpResponse(StatusCodes.OK, entity = "called!")))
         }
       })
 
       val akkaHttpSecurity = new AkkaHttpSecurity(config, new ForgetfulSessionStorage)
 
-      Get("/") ~> akkaHttpSecurity.callback("/blaat", false, false, Some("Yooo")) ~> check {
+      Get("/") ~> akkaHttpSecurity.callback("/blaat", saveInSession = false, multiProfile = false, Some("Yooo")) ~> check {
         status shouldEqual StatusCodes.OK
         responseAs[String] shouldBe "called!"
       }
@@ -230,6 +231,64 @@ class AkkaHttpSecurityTest extends WordSpecLike with Matchers with ScalatestRout
       Get("/") ~> route ~> check {
         status shouldBe StatusCodes.OK
         entityAs[String] shouldBe "cool!"
+      }
+    }
+  }
+
+  "AkkaHttpSecurity.logout" should {
+    "run the callbackLogic with the expected parameters" in {
+      val config = new Config()
+
+      config.setHttpActionAdapter(AkkaHttpActionAdapter)
+      config.setLogoutLogic(new AkkaHttpLogoutLogic {
+        override def perform(context: AkkaHttpWebContext, config: Config, httpActionAdapter: HttpActionAdapter[Future[RouteResult], AkkaHttpWebContext], defaultUrl: String, logoutUrlPattern: String, localLogout: lang.Boolean, destroySession: lang.Boolean, centralLogout: lang.Boolean): Future[RouteResult] = {
+          httpActionAdapter shouldBe AkkaHttpActionAdapter
+          defaultUrl shouldBe "/home"
+          logoutUrlPattern shouldBe "*"
+          localLogout shouldBe false
+          destroySession shouldBe false
+
+          Future.successful(Complete(HttpResponse(StatusCodes.OK, entity = "logout!")))
+        }
+      })
+
+      val akkaHttpSecurity = new AkkaHttpSecurity(config, new ForgetfulSessionStorage)
+
+      Get("/") ~> akkaHttpSecurity.logout("/home", "*", localLogout = false, destroySession = false) ~> check {
+        status shouldEqual StatusCodes.OK
+        responseAs[String] shouldBe "logout!"
+      }
+    }
+
+    "destroy the session and create a new empty one" in {
+      val config = new Config()
+
+      val client = new IndirectClient[UsernamePasswordCredentials, CommonProfile] {
+        override def clientInit(): Unit = ???
+      }
+
+      val logoutLogic = new DefaultLogoutLogic[Future[RouteResult], AkkaHttpWebContext] {
+        override def perform(context: AkkaHttpWebContext, config: Config, httpActionAdapter: HttpActionAdapter[Future[RouteResult], AkkaHttpWebContext], defaultUrl: String, inputLogoutUrlPattern: String, inputLocalLogout: lang.Boolean, inputDestroySession: lang.Boolean, inputCentralLogout: lang.Boolean): Future[RouteResult] = {
+
+          context.sessionStorage.setSessionValue(context.sessionId, Pac4jConstants.USER_PROFILES, "Profile")
+          context.sessionStorage.getSessionValue(context.sessionId, Pac4jConstants.USER_PROFILES) contains "Profile"
+
+          val response = super.perform(context, config, httpActionAdapter, defaultUrl, inputLogoutUrlPattern, inputLocalLogout, inputDestroySession, inputCentralLogout)
+          context.sessionStorage.getSessionValue(context.sessionId, Pac4jConstants.USER_PROFILES) shouldBe empty
+
+          response
+        }
+      }
+
+      config.setHttpActionAdapter(AkkaHttpActionAdapter)
+      config.setLogoutLogic(logoutLogic)
+      config.setClients(new Clients("url", client))
+
+      val akkaHttpSecurity = new AkkaHttpSecurity(config, new InMemorySessionStorage(5000.seconds))
+
+      Get("/") ~> akkaHttpSecurity.logout("/home", "*") ~> check {
+        status shouldEqual StatusCodes.SeeOther
+        header("Location").get.value shouldBe "/home"
       }
     }
   }

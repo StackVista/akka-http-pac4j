@@ -7,7 +7,7 @@ class AkkaHttpSessionStore() extends SessionStore[AkkaHttpWebContext] {
   override def getOrCreateSessionId(context: AkkaHttpWebContext): String = context.sessionId
 
   override def get(context: AkkaHttpWebContext, key: String): Object =
-    context.sessionStorage.getSessionValue(context.sessionId, key).getOrElse(null)
+    context.sessionStorage.getSessionValue(context.sessionId, key).orNull
 
   override def set(context: AkkaHttpWebContext, key: String, value: scala.AnyRef): Unit =
     context.sessionStorage.setSessionValue(context.sessionId, key, value)

@@ -5,7 +5,7 @@ lazy val root = (project in file(".")).
     inThisBuild(List(
       organization := "com.stackstate",
       scalaVersion := "2.12.4",
-      version      := "0.2.0"
+      version      := "0.3.0"
     )),
     name := "akka-http-pac4j",
     libraryDependencies ++= Seq(
@@ -73,5 +73,11 @@ developers := List(
     name = "Bram Schuur",
     email = "bschuur@stackstate.com",
     url = url("https://github.com/craffit")
+  ),
+  Developer(
+    id = "aacevedo",
+    name = "Alejandro Acevedo",
+    email = "aacevedoosorio@gmail.com",
+    url = url("https://github.com/aacevedoosorio")
   )
 )

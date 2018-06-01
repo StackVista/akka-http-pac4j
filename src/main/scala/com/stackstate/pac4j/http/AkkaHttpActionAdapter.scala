@@ -11,7 +11,7 @@ import com.stackstate.pac4j.AkkaHttpWebContext
 import scala.concurrent.Future
 
 object AkkaHttpActionAdapter extends HttpActionAdapter[Future[RouteResult], AkkaHttpWebContext] {
-  override def adapt(code: Int, context: AkkaHttpWebContext) = {
+  override def adapt(code: Int, context: AkkaHttpWebContext): Future[Complete] = {
     Future.successful(Complete(code match {
       case HttpConstants.UNAUTHORIZED =>
         HttpResponse(Unauthorized)
