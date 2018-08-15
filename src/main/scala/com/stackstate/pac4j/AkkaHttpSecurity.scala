@@ -96,7 +96,7 @@ class AkkaHttpSecurity(config: Config, sessionStorage: SessionStorage)(implicit 
     * This directive constructs a pac4j context for a route. This means the request is interpreted into
     * an AkkaHttpWebContext and any changes to this context are applied when the route returns (e.g. headers/cookies).
     */
-  def withContext[A](enforceFormEncoding: Boolean): Directive1[AkkaHttpWebContext] =
+  def withContext(enforceFormEncoding: Boolean): Directive1[AkkaHttpWebContext] =
     new Directive1[AkkaHttpWebContext] {
       override def tapply(innerRoute: Tuple1[AkkaHttpWebContext] => Route): Route = { ctx =>
         import ctx.materializer
