@@ -50,7 +50,7 @@ class AkkaHttpSecurityTest extends WordSpecLike with Matchers with ScalatestRout
         override def perform(context: AkkaHttpWebContext, config: Config, securityGrantedAccessAdapter: SecurityGrantedAccessAdapter[Future[RouteResult], AkkaHttpWebContext], httpActionAdapter: HttpActionAdapter[Future[RouteResult], AkkaHttpWebContext], clients: String, authorizers: String, matchers: String, multiProfile: lang.Boolean, parameters: AnyRef*): Future[RouteResult] = {
           clients shouldBe "myclients"
           matchers shouldBe "" // Empty string means always matching hit in RequireAllMatchersChecker.java
-          authorizers shouldBe "" // Empty string means always authorize in DefaultAuthorizationCheck.java
+          authorizers shouldBe "myauthorizers" // Empty string means always authorize in DefaultAuthorizationCheck.java
           multiProfile shouldBe false
 
           httpActionAdapter shouldBe actionAdapter
@@ -60,7 +60,7 @@ class AkkaHttpSecurityTest extends WordSpecLike with Matchers with ScalatestRout
 
       val akkaHttpSecurity = new AkkaHttpSecurity(config, new ForgetfulSessionStorage)
 
-      Get("/") ~> akkaHttpSecurity.withAuthentication("myclients", multiProfile = false) { _ => complete("problem!") } ~> check {
+      Get("/") ~> akkaHttpSecurity.withAuthentication("myclients", multiProfile = false, authorizers = "myauthorizers") { _ => complete("problem!") } ~> check {
         status shouldEqual StatusCodes.OK
         responseAs[String] shouldBe "called!"
       }

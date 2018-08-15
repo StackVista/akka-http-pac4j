@@ -96,7 +96,7 @@ class AkkaHttpSecurity(config: Config, sessionStorage: SessionStorage)(implicit 
     * This directive constructs a pac4j context for a route. This means the request is interpreted into
     * an AkkaHttpWebContext and any changes to this context are applied when the route returns (e.g. headers/cookies).
     */
-  private[pac4j] def withContext[A](enforceFormEncoding: Boolean): Directive1[AkkaHttpWebContext] =
+  def withContext(enforceFormEncoding: Boolean): Directive1[AkkaHttpWebContext] =
     new Directive1[AkkaHttpWebContext] {
       override def tapply(innerRoute: Tuple1[AkkaHttpWebContext] => Route): Route = { ctx =>
         import ctx.materializer
@@ -119,6 +119,7 @@ class AkkaHttpSecurity(config: Config, sessionStorage: SessionStorage)(implicit 
                           clients: String = null /* Default null, meaning all defined clients */ ,
                           multiProfile: Boolean = true,
                           enforceFormEncoding: Boolean = false, //Force form parameters to be passed for authentication or the request fails
+                          authorizers: String = ""
                         ): Directive1[AuthenticatedRequest] =
     withContext(enforceFormEncoding).flatMap { akkaWebContext =>
       new Directive1[AuthenticatedRequest] {
@@ -126,7 +127,7 @@ class AkkaHttpSecurity(config: Config, sessionStorage: SessionStorage)(implicit 
           securityLogic.perform(akkaWebContext, config, (context: AkkaHttpWebContext, profiles: util.Collection[CommonProfile], parameters: AnyRef) => {
             val authenticatedRequest = AuthenticatedRequest(context, profiles.asScala.toList)
             innerRoute(Tuple1(authenticatedRequest))(ctx)
-          }, actionAdapter, clients, "", "", multiProfile)
+          }, actionAdapter, clients, authorizers, "", multiProfile)
         }
       }
     }
@@ -155,6 +156,9 @@ class AkkaHttpSecurity(config: Config, sessionStorage: SessionStorage)(implicit 
     }
   }
 
-  def withAllClientsAuthentication(multiProfile: Boolean = true, enforceFormEncoding: Boolean = false): Directive1[AuthenticatedRequest] =
-    withAuthentication(config.getClients.findAllClients().asScala.map(_.getName).mkString(","), multiProfile, enforceFormEncoding)
+  def withAllClientsAuthentication(multiProfile: Boolean = true, enforceFormEncoding: Boolean = false): Directive1[AuthenticatedRequest] = {
+    val authorizers = config.getAuthorizers.keySet().asScala.mkString(",")
+    val clients = config.getClients.findAllClients().asScala.map(_.getName).mkString(",")
+    withAuthentication(clients, multiProfile, enforceFormEncoding, authorizers)
+  }
 }
