@@ -127,11 +127,14 @@ class AkkaHttpSecurity(config: Config, sessionStorage: SessionStorage)(implicit 
         // TODO This is a hack to ensure that any underlying Futures are scheduled (and handled in case of errors) from here
         // TODO Fix this properly
         Future.successful(()).flatMap { _ =>
-            securityLogic.perform(akkaWebContext, config, (context: AkkaHttpWebContext, profiles: util.Collection[CommonProfile], parameters: AnyRef) => {
+          val securityGrantedAccessAdapter = new SecurityGrantedAccessAdapter[Future[RouteResult], AkkaHttpWebContext] {
+            override def adapt(context: AkkaHttpWebContext, profiles: util.Collection[CommonProfile], parameters: AnyRef*): Future[RouteResult] = {
               val authenticatedRequest = AuthenticatedRequest(context, profiles.asScala.toList)
               inner(Tuple1(authenticatedRequest))(ctx)
-            }, actionAdapter, clients, authorizers, "", multiProfile)
+            }
           }
+          securityLogic.perform(akkaWebContext, config, securityGrantedAccessAdapter, actionAdapter, clients, authorizers, "", multiProfile)
+        }
       }
     }
 

@@ -36,6 +36,8 @@ lazy val root = (project in file(".")).
     )
   )
 
+crossScalaVersions := Seq("2.11.12", scalaVersion.value)
+
 pgpReadOnly := false
 
 publishMavenStyle := true
