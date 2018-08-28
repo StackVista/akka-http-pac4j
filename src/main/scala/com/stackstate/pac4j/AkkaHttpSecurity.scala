@@ -124,10 +124,15 @@ class AkkaHttpSecurity(config: Config, sessionStorage: SessionStorage)(implicit 
     withContext(enforceFormEncoding).flatMap { akkaWebContext =>
       new Directive1[AuthenticatedRequest] {
         override def tapply(innerRoute: Tuple1[AuthenticatedRequest] => Route): Route = { ctx =>
-          securityLogic.perform(akkaWebContext, config, (context: AkkaHttpWebContext, profiles: util.Collection[CommonProfile], parameters: AnyRef) => {
-            val authenticatedRequest = AuthenticatedRequest(context, profiles.asScala.toList)
-            innerRoute(Tuple1(authenticatedRequest))(ctx)
-          }, actionAdapter, clients, authorizers, "", multiProfile)
+
+          val securityGrantedAccessAdapter = new SecurityGrantedAccessAdapter[Future[RouteResult], AkkaHttpWebContext] {
+            override def adapt(context: AkkaHttpWebContext, profiles: util.Collection[CommonProfile], parameters: AnyRef*): Future[RouteResult] = {
+              val authenticatedRequest = AuthenticatedRequest(context, profiles.asScala.toList)
+              innerRoute(Tuple1(authenticatedRequest))(ctx)
+            }
+          }
+
+          securityLogic.perform(akkaWebContext, config, securityGrantedAccessAdapter, actionAdapter, clients, authorizers, "", multiProfile)
         }
       }
     }
