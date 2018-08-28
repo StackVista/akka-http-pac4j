@@ -6,4 +6,3 @@ A wrapper around pac4j (www.pac4j.org) built using AkkaHTTP
 ## publishing
 
 - Follow the procedure on: https://www.scala-sbt.org/1.x/docs/Using-Sonatype.html
-- Ask one of your fellow colleagues to create a ticket on sonatype for inclusion into the com.stackstate group.
