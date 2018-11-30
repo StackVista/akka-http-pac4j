@@ -2,23 +2,22 @@ package com.stackstate.pac4j
 
 import java.{lang, util}
 
-import akka.http.scaladsl.server.AuthorizationFailedRejection
 import akka.http.scaladsl.model._
-import com.stackstate.pac4j.AkkaHttpSecurity.{AkkaHttpCallbackLogic, AkkaHttpLogoutLogic, AkkaHttpSecurityLogic}
-import org.pac4j.core.config.Config
-import org.pac4j.core.http.adapter.HttpActionAdapter
-import org.pac4j.core.context.{Cookie, Pac4jConstants, WebContext}
-import org.scalatest.{Matchers, WordSpecLike}
 import akka.http.scaladsl.server.Directives._
-import akka.http.scaladsl.server.RouteResult
+import akka.http.scaladsl.server.{AuthorizationFailedRejection, RouteResult}
 import akka.http.scaladsl.server.RouteResult.Complete
 import akka.http.scaladsl.testkit.ScalatestRouteTest
+import com.stackstate.pac4j.AkkaHttpSecurity.{AkkaHttpCallbackLogic, AkkaHttpLogoutLogic, AkkaHttpSecurityLogic}
 import com.stackstate.pac4j.http.AkkaHttpActionAdapter
 import com.stackstate.pac4j.store.{ForgetfulSessionStorage, InMemorySessionStorage}
 import org.pac4j.core.client.{Clients, IndirectClient}
+import org.pac4j.core.config.Config
+import org.pac4j.core.context.{Cookie, Pac4jConstants, WebContext}
 import org.pac4j.core.credentials.UsernamePasswordCredentials
 import org.pac4j.core.engine.{DefaultCallbackLogic, DefaultLogoutLogic, DefaultSecurityLogic, SecurityGrantedAccessAdapter}
+import org.pac4j.core.http.adapter.HttpActionAdapter
 import org.pac4j.core.profile.CommonProfile
+import org.scalatest.{Matchers, WordSpecLike}
 
 import scala.collection.JavaConverters._
 import scala.concurrent.Future
@@ -108,17 +107,31 @@ class AkkaHttpSecurityTest extends WordSpecLike with Matchers with ScalatestRout
       }
     }
 
-    "sets response cookies when they're set in the context" in {
+    "sets response cookies (deduplicated) when they're set in the context" in {
       val config = new Config()
       val akkaHttpSecurity = new AkkaHttpSecurity(config, new ForgetfulSessionStorage)
 
       Get("/") ~> akkaHttpSecurity.withContext(false) { context =>
-        context.addResponseCookie(new Cookie("MyCookie", "MyValue"))
+        val cookie = new Cookie("MyCookie", "MyValue")
+        cookie.setSecure(true)
+        cookie.setMaxAge(100)
+        cookie.setHttpOnly(true)
+        cookie.setPath("/")
+
+        val cookie2 = new Cookie("MyCookie", "MyValue")
+        cookie2.setSecure(true)
+        cookie2.setMaxAge(100)
+        cookie2.setHttpOnly(true)
+        cookie2.setPath("/")
+
+        context.addResponseCookie(cookie)
+        context.addResponseCookie(cookie2)
         complete("called!")
       } ~> check {
         status shouldEqual StatusCodes.OK
         responseAs[String] shouldBe "called!"
-        header("Set-Cookie").get.value() shouldBe "MyCookie=MyValue"
+        headers.size shouldBe 1
+        header("Set-Cookie").get.value() shouldBe "MyCookie=MyValue; Max-Age=100; Path=/; Secure; HttpOnly"
       }
     }
 
@@ -182,6 +195,37 @@ class AkkaHttpSecurityTest extends WordSpecLike with Matchers with ScalatestRout
       val akkaHttpSecurity = new AkkaHttpSecurity(config, new ForgetfulSessionStorage)
 
       Get("/") ~> akkaHttpSecurity.callback("/blaat", saveInSession = false, multiProfile = false, Some("Yooo")) ~> check {
+        status shouldEqual StatusCodes.OK
+        responseAs[String] shouldBe "called!"
+      }
+    }
+
+    "run the callbackLogic reusing an akka http context" in {
+      val config = new Config()
+      val existingContext = AkkaHttpWebContext(HttpRequest(), Seq.empty, new ForgetfulSessionStorage)
+
+      val actionAdapter = new HttpActionAdapter[HttpResponse, AkkaHttpWebContext] {
+        override def adapt(code: Int, context: AkkaHttpWebContext): HttpResponse = ???
+      }
+
+      config.setHttpActionAdapter(actionAdapter)
+      config.setCallbackLogic(new AkkaHttpCallbackLogic {
+        override def perform(context: AkkaHttpWebContext, config: Config, httpActionAdapter: HttpActionAdapter[Future[RouteResult], AkkaHttpWebContext], defaultUrl: String, saveInSession: lang.Boolean, multiProfile: lang.Boolean, renewSession: lang.Boolean, client: String): Future[RouteResult] = {
+          existingContext.sessionId shouldBe context.sessionId
+          httpActionAdapter shouldBe actionAdapter
+          defaultUrl shouldBe "/blaat"
+          saveInSession shouldBe false
+          multiProfile shouldBe false
+          renewSession shouldBe false
+          client shouldBe "Yooo"
+
+          Future.successful(Complete(HttpResponse(StatusCodes.OK, entity = "called!")))
+        }
+      })
+
+      val akkaHttpSecurity = new AkkaHttpSecurity(config, new ForgetfulSessionStorage)
+
+      Get("/") ~> akkaHttpSecurity.callback("/blaat", saveInSession = false, multiProfile = false, Some("Yooo"), existingContext = Some(existingContext)) ~> check {
         status shouldEqual StatusCodes.OK
         responseAs[String] shouldBe "called!"
       }

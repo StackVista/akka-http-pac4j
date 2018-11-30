@@ -38,7 +38,7 @@ object AkkaHttpSecurity {
     val cookieHeaders: List[HttpHeader] = changes.cookies.map(v => `Set-Cookie`(v))
     val additionalHeaders: immutable.Seq[HttpHeader] = regularHeaders ++ cookieHeaders
 
-    httpResponse.mapHeaders(additionalHeaders ++ _)
+    httpResponse.mapHeaders(h => (additionalHeaders ++ h).distinct)
   }
 
   /**
@@ -96,13 +96,13 @@ class AkkaHttpSecurity(config: Config, sessionStorage: SessionStorage)(implicit 
     * This directive constructs a pac4j context for a route. This means the request is interpreted into
     * an AkkaHttpWebContext and any changes to this context are applied when the route returns (e.g. headers/cookies).
     */
-  def withContext(enforceFormEncoding: Boolean): Directive1[AkkaHttpWebContext] =
+  def withContext(enforceFormEncoding: Boolean, existingContext: Option[AkkaHttpWebContext] = None): Directive1[AkkaHttpWebContext] =
     new Directive1[AkkaHttpWebContext] {
       override def tapply(innerRoute: Tuple1[AkkaHttpWebContext] => Route): Route = { ctx =>
         import ctx.materializer
 
         getFormFields(ctx.request.entity, enforceFormEncoding).flatMap { formParams =>
-          val akkaWebContext = AkkaHttpWebContext(ctx.request, formParams, sessionStorage)
+          val akkaWebContext = existingContext.getOrElse(AkkaHttpWebContext(ctx.request, formParams, sessionStorage))
           innerRoute(Tuple1(akkaWebContext))(ctx).map[RouteResult] {
             case Complete(response) => Complete(applyHeadersAndCookiesToResponse(akkaWebContext.getChanges)(response))
             case rejection => rejection
@@ -139,9 +139,10 @@ class AkkaHttpSecurity(config: Config, sessionStorage: SessionStorage)(implicit 
                saveInSession: Boolean = true,
                multiProfile: Boolean = true,
                defaultClient: Option[String] = None,
-               enforceFormEncoding: Boolean = false
+               enforceFormEncoding: Boolean = false,
+               existingContext: Option[AkkaHttpWebContext] = None
               ): Route = {
-    withContext(enforceFormEncoding) { akkaWebContext => ctx =>
+    withContext(enforceFormEncoding, existingContext) { akkaWebContext => ctx =>
       callbackLogic.perform(akkaWebContext, config, actionAdapter, defaultUrl, saveInSession, multiProfile, false, defaultClient.orNull)
     }
   }
