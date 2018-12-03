@@ -58,7 +58,7 @@ object AkkaHttpSecurity {
       if (enforceFormEncoding) {
         Future.failed(e)
       } else {
-        Future.successful(Seq.empty)
+        Future.successful(immutable.Seq.empty)
       }
     }
   }
