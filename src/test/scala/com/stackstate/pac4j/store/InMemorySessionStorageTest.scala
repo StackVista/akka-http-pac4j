@@ -95,6 +95,27 @@ class InMemorySessionStorageTest extends WordSpecLike with Matchers with Scalate
     }
   }
 
+  "InMemorySessionStorage.getSessionValues" should {
+    "return nothing when the session does not exist" in {
+      mockedTimeStorage().getSessionValues("session") shouldEqual None
+    }
+
+    "return an empty map after the session is first created" in {
+      val storage = mockedTimeStorage()
+      storage.createSessionIfNeeded("session")
+
+      storage.getSessionValues("session") shouldEqual Some(Map.empty)
+    }
+
+    "returned stored data" in {
+      val storage = mockedTimeStorage()
+      storage.createSessionIfNeeded("session")
+
+      storage.setSessionValues("session", Map("abc" -> "def")) shouldEqual true
+      storage.getSessionValues("session") shouldEqual Some(Map("abc" -> "def"))
+    }
+  }
+
   "InMemorySessionStorage.setSessionValue" should {
     "return false when the session does not exist" in {
       val storage = mockedTimeStorage()
@@ -124,6 +145,31 @@ class InMemorySessionStorageTest extends WordSpecLike with Matchers with Scalate
       storage.setSessionValue("session", "mykey", "yoo") shouldBe false
       storage.expiryQueue shouldBe Set()
       storage.sessionData shouldBe Map()
+    }
+  }
+
+  "InMemorySessionStorage.setSessionValues" should {
+    "return false when the session does not exist" in {
+      mockedTimeStorage().setSessionValues("abc", Map.empty) shouldEqual false
+    }
+
+    "return true when setting succeeded" in {
+      val storage = mockedTimeStorage()
+      storage.createSessionIfNeeded("session")
+      storage.setSessionValues("session", Map("abc" -> "def")) shouldEqual true
+    }
+
+    "append values to existing ones, or overwrite them if the keys already exist" in {
+      val storage = mockedTimeStorage()
+      storage.createSessionIfNeeded("session")
+      storage.setSessionValues("session", Map("abc" -> "def")) shouldEqual true
+      storage.getSessionValues("session") shouldEqual Some(Map("abc" -> "def"))
+
+      storage.setSessionValues("session", Map("bla" -> "bla"))
+      storage.getSessionValues("session") shouldEqual Some(Map("abc" -> "def", "bla" -> "bla"))
+
+      storage.setSessionValues("session", Map("abc" -> "abc"))
+      storage.getSessionValues("session") shouldEqual Some(Map("abc" -> "abc", "bla" -> "bla"))
     }
   }
 

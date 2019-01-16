@@ -20,4 +20,8 @@ class ForgetfulSessionStorage extends SessionStorage {
   override def destroySession(sessionKey: SessionKey): Boolean = false
 
   override def renewSession(sessionKey: SessionKey): Boolean = false
+
+  override def getSessionValues(sessionKey: SessionKey): Option[Map[ValueKey, AnyRef]] = None
+
+  override def setSessionValues(sessionKey: SessionKey, values: Map[ValueKey, AnyRef]): Boolean = false
 }

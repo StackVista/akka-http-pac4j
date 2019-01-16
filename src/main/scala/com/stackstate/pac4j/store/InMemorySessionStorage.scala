@@ -58,6 +58,13 @@ class InMemorySessionStorage(override val sessionLifetime: FiniteDuration) exten
     }
   }
 
+  override def getSessionValues(sessionKey: SessionKey): Option[Map[ValueKey, AnyRef]] = {
+    this.synchronized {
+      expireOldSessions()
+      sessionData.get(sessionKey).map(_.data)
+    }
+  }
+
   override def setSessionValue(sessionKey: SessionKey, key: ValueKey, value: AnyRef): Boolean = {
     this.synchronized {
       expireOldSessions()
@@ -65,6 +72,19 @@ class InMemorySessionStorage(override val sessionLifetime: FiniteDuration) exten
         case None => false
         case Some(DataRecord(registered, data)) =>
           sessionData = sessionData + (sessionKey -> DataRecord(registered, data + (key -> value)))
+          true
+      }
+    }
+  }
+
+  override def setSessionValues(sessionKey: SessionKey, values: Map[ValueKey, AnyRef]): Boolean = {
+    this.synchronized {
+      expireOldSessions()
+      sessionData.get(sessionKey) match {
+        case None =>
+          false
+        case Some(DataRecord(registered, data)) =>
+          sessionData = sessionData + (sessionKey -> DataRecord(registered, data ++ values))
           true
       }
     }

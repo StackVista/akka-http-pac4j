@@ -185,7 +185,7 @@ class AkkaHttpSecurityTest extends WordSpecLike with Matchers with ScalatestRout
           defaultUrl shouldBe "/blaat"
           saveInSession shouldBe false
           multiProfile shouldBe false
-          renewSession shouldBe false
+          renewSession shouldBe true
           client shouldBe "Yooo"
 
           Future.successful(Complete(HttpResponse(StatusCodes.OK, entity = "called!")))
@@ -216,7 +216,7 @@ class AkkaHttpSecurityTest extends WordSpecLike with Matchers with ScalatestRout
           defaultUrl shouldBe "/blaat"
           saveInSession shouldBe false
           multiProfile shouldBe false
-          renewSession shouldBe false
+          renewSession shouldBe true
           client shouldBe "Yooo"
 
           Future.successful(Complete(HttpResponse(StatusCodes.OK, entity = "called!")))
