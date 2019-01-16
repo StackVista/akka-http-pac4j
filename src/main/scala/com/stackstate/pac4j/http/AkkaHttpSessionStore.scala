@@ -21,5 +21,14 @@ class AkkaHttpSessionStore() extends SessionStore[AkkaHttpWebContext] {
     this
   }
 
-  override def renewSession(context: AkkaHttpWebContext): Boolean = false
+  override def renewSession(context: AkkaHttpWebContext): Boolean = {
+    val sessionId = getOrCreateSessionId(context)
+    val sessionValues = context.sessionStorage.getSessionValues(sessionId)
+    destroySession(context)
+
+    val newSessionId = getOrCreateSessionId(context)
+    sessionValues.foreach (context.sessionStorage.setSessionValues(newSessionId, _))
+
+    true
+  }
 }

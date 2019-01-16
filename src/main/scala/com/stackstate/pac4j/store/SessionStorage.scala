@@ -31,9 +31,19 @@ trait SessionStorage {
   def getSessionValue(sessionKey: SessionKey, key: ValueKey): Option[AnyRef]
 
   /**
+    * Get all values stored in an existing session, returns None when the session id or the values cannot be found
+    */
+  def getSessionValues(sessionKey: SessionKey): Option[Map[ValueKey, AnyRef]]
+
+  /**
     * Set a value for a given session. Returns false if the session did not exist
     */
   def setSessionValue(sessionKey: SessionKey, key: ValueKey, value: scala.AnyRef): Boolean
+
+  /**
+    * Set all values for a given session. Returns false if the session did not exist
+    */
+  def setSessionValues(sessionKey: SessionKey, values: Map[ValueKey, AnyRef]): Boolean
 
   /**
     * Renew a session, meaning its lifetime start from 'now'
@@ -44,4 +54,5 @@ trait SessionStorage {
     * Destroy a session
     */
   def destroySession(sessionKey: SessionKey): Boolean
+
 }
