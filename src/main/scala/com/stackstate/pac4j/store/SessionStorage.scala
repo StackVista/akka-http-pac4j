@@ -36,12 +36,12 @@ trait SessionStorage {
   def getSessionValues(sessionKey: SessionKey): Option[Map[ValueKey, AnyRef]]
 
   /**
-    * Set all values for a given session. Returns false if the session did not exist
+    * Set a value for a given session. Returns false if the session did not exist
     */
   def setSessionValue(sessionKey: SessionKey, key: ValueKey, value: scala.AnyRef): Boolean
 
   /**
-    * Set a value for a given session. Returns false if the session did not exist
+    * Set all values for a given session. Returns false if the session did not exist
     */
   def setSessionValues(sessionKey: SessionKey, values: Map[ValueKey, AnyRef]): Boolean
 
