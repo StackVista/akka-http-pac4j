@@ -144,6 +144,10 @@ class AkkaHttpSecurity(config: Config, sessionStorage: SessionStorage)(implicit 
               ): Route = {
     withContext(enforceFormEncoding, existingContext) { akkaWebContext => ctx =>
       callbackLogic.perform(akkaWebContext, config, actionAdapter, defaultUrl, saveInSession, multiProfile, true, defaultClient.orNull)
+        .map { result =>
+          akkaWebContext.addResponseSessionCookie()
+          result
+        }
     }
   }
 

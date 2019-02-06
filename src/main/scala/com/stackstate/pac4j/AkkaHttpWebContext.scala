@@ -164,17 +164,15 @@ case class AkkaHttpWebContext(request: HttpRequest,
     changes.contentType
   }
 
-  def getChanges: ResponseChanges = {
-    if (sessionStorage.renewSession(sessionId)) {
-      val cookie = new Cookie(COOKIE_NAME, sessionId)
-      cookie.setSecure(isSecure)
-      cookie.setMaxAge(sessionStorage.sessionLifetime.toSeconds.toInt)
-      cookie.setHttpOnly(true)
-      cookie.setPath("/")
-      addResponseCookie(cookie)
-    }
+  def getChanges: ResponseChanges = changes
 
-    changes
+  def addResponseSessionCookie(): Unit = {
+    val cookie = new Cookie(COOKIE_NAME, sessionId)
+    cookie.setSecure(isSecure)
+    cookie.setMaxAge(sessionStorage.sessionLifetime.toSeconds.toInt)
+    cookie.setHttpOnly(true)
+    cookie.setPath("/")
+    addResponseCookie(cookie)
   }
 }
 
