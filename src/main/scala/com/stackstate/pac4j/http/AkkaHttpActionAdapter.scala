@@ -1,6 +1,6 @@
 package com.stackstate.pac4j.http
 
-import akka.http.scaladsl.model.{ HttpEntity, HttpResponse }
+import akka.http.scaladsl.model.{HttpEntity, HttpResponse}
 import org.pac4j.core.context.HttpConstants
 import org.pac4j.core.http.adapter.HttpActionAdapter
 import akka.http.scaladsl.model.StatusCodes._
@@ -22,6 +22,7 @@ object AkkaHttpActionAdapter extends HttpActionAdapter[Future[RouteResult], Akka
       case HttpConstants.FORBIDDEN =>
         HttpResponse(Forbidden)
       case HttpConstants.TEMP_REDIRECT =>
+        context.addResponseSessionCookie()
         HttpResponse(SeeOther)
       case HttpConstants.OK =>
         val contentBytes = context.getResponseContent.getBytes

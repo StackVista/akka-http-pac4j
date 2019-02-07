@@ -5,6 +5,7 @@ import java.util.UUID
 import akka.http.scaladsl.model.HttpHeader.ParsingResult.{Error, Ok}
 import akka.http.scaladsl.model.headers.HttpCookie
 import akka.http.scaladsl.model.{ContentType, HttpHeader, HttpRequest}
+import com.stackstate.pac4j.authorizer.CsrfCookieAuthorizer
 import com.stackstate.pac4j.http.AkkaHttpSessionStore
 import com.stackstate.pac4j.store.SessionStorage
 import org.pac4j.core.context.{Cookie, WebContext}
@@ -174,6 +175,8 @@ case class AkkaHttpWebContext(request: HttpRequest,
     cookie.setPath("/")
     addResponseCookie(cookie)
   }
+
+  def addResponseCsrfCookie(): Unit = CsrfCookieAuthorizer(this, Some(sessionStorage.sessionLifetime))
 }
 
 object AkkaHttpWebContext {
