@@ -140,10 +140,16 @@ class AkkaHttpSecurity(config: Config, sessionStorage: SessionStorage)(implicit 
                multiProfile: Boolean = true,
                defaultClient: Option[String] = None,
                enforceFormEncoding: Boolean = false,
-               existingContext: Option[AkkaHttpWebContext] = None
+               existingContext: Option[AkkaHttpWebContext] = None,
+               setCsrfCookie: Boolean = true
               ): Route = {
     withContext(enforceFormEncoding, existingContext) { akkaWebContext => ctx =>
       callbackLogic.perform(akkaWebContext, config, actionAdapter, defaultUrl, saveInSession, multiProfile, true, defaultClient.orNull)
+        .map { result =>
+          akkaWebContext.addResponseSessionCookie()
+          if (setCsrfCookie) akkaWebContext.addResponseCsrfCookie()
+          result
+        }
     }
   }
 

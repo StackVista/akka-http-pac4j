@@ -95,6 +95,7 @@ class AkkaHttpWebContextTest extends WordSpecLike with Matchers {
       override val sessionLifetime = 3.seconds
       override def renewSession(session: SessionKey): Boolean = true
     }) { webContext =>
+      webContext.addResponseSessionCookie()
       webContext.getChanges.cookies.find(_.name == AkkaHttpWebContext.COOKIE_NAME) shouldBe Some(
         HttpCookie(
           name = AkkaHttpWebContext.COOKIE_NAME,
@@ -119,6 +120,7 @@ class AkkaHttpWebContextTest extends WordSpecLike with Matchers {
       override val sessionLifetime = 3.seconds
       override def renewSession(session: SessionKey): Boolean = true
     }) { webContext =>
+      webContext.addResponseSessionCookie()
       webContext.getChanges.cookies.find(_.name == AkkaHttpWebContext.COOKIE_NAME).get.secure shouldBe true
     }
 
@@ -130,6 +132,7 @@ class AkkaHttpWebContextTest extends WordSpecLike with Matchers {
         override def renewSession(session: SessionKey): Boolean = true
       }
     ) { webContext =>
+      webContext.addResponseSessionCookie()
       webContext.getChanges.cookies.find(_.name == AkkaHttpWebContext.COOKIE_NAME).isDefined shouldEqual true
     }
 
@@ -141,6 +144,7 @@ class AkkaHttpWebContextTest extends WordSpecLike with Matchers {
         override def renewSession(session: SessionKey): Boolean = true
       }
     ) { webContext =>
+      webContext.addResponseSessionCookie()
       webContext.getChanges.cookies.find(_.name == AkkaHttpWebContext.COOKIE_NAME).get.value shouldEqual "my_session"
     }
 
