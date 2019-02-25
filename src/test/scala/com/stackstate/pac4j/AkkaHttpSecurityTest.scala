@@ -97,7 +97,7 @@ class AkkaHttpSecurityTest extends WordSpecLike with Matchers with ScalatestRout
       val config = new Config()
       val akkaHttpSecurity = new AkkaHttpSecurity(config, new ForgetfulSessionStorage)
 
-      Get("/") ~> akkaHttpSecurity.withContext(false) { context =>
+      Get("/") ~> akkaHttpSecurity.withContext() { context =>
         context.setResponseHeader("MyHeader", "MyValue")
         complete("called!")
       } ~> check {
@@ -111,7 +111,7 @@ class AkkaHttpSecurityTest extends WordSpecLike with Matchers with ScalatestRout
       val config = new Config()
       val akkaHttpSecurity = new AkkaHttpSecurity(config, new ForgetfulSessionStorage)
 
-      Get("/") ~> akkaHttpSecurity.withContext(false) { context =>
+      Get("/") ~> akkaHttpSecurity.withContext() { context =>
         val cookie = new Cookie("MyCookie", "MyValue")
         cookie.setSecure(true)
         cookie.setMaxAge(100)
@@ -145,8 +145,8 @@ class AkkaHttpSecurityTest extends WordSpecLike with Matchers with ScalatestRout
         entity = HttpEntity(ContentType(MediaTypes.`application/x-www-form-urlencoded`, HttpCharsets.`UTF-8`), "username=testuser".getBytes)
       )
 
-      postRequest ~> akkaHttpSecurity.withContext(false) { context =>
-        context.getRequestParameter("username") shouldEqual "testuser"
+      postRequest ~> akkaHttpSecurity.withFormParameters(enforceFormEncoding = false) { params =>
+        params("username") shouldEqual "testuser"
         complete("called!")
       } ~> check {
         status shouldEqual StatusCodes.OK
@@ -164,7 +164,7 @@ class AkkaHttpSecurityTest extends WordSpecLike with Matchers with ScalatestRout
         entity = HttpEntity(ContentType(MediaTypes.`application/json`), "".getBytes)
       )
 
-      postRequest ~> akkaHttpSecurity.withContext(true) { _ => fail("perform should never be called!") } ~> check {
+      postRequest ~> akkaHttpSecurity.withFormParameters(enforceFormEncoding = true) { _ => fail("perform should never be called!") } ~> check {
         status shouldEqual StatusCodes.InternalServerError
       }
     }

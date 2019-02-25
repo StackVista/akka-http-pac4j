@@ -5,7 +5,7 @@ import java.util
 import akka.http.scaladsl.common.StrictForm
 import akka.http.scaladsl.model.{HttpEntity, HttpHeader, HttpResponse}
 import akka.http.scaladsl.server.Directives.{authorize => akkaHttpAuthorize}
-import akka.http.scaladsl.server.{Directive0, Directive1, Route, RouteResult}
+import akka.http.scaladsl.server.{Directive, Directive0, Directive1, Route, RouteResult}
 import akka.http.scaladsl.model.headers._
 import akka.http.scaladsl.server.RouteResult.Complete
 import akka.http.scaladsl.unmarshalling.Unmarshal
@@ -96,18 +96,20 @@ class AkkaHttpSecurity(config: Config, sessionStorage: SessionStorage)(implicit 
     * This directive constructs a pac4j context for a route. This means the request is interpreted into
     * an AkkaHttpWebContext and any changes to this context are applied when the route returns (e.g. headers/cookies).
     */
-  def withContext(enforceFormEncoding: Boolean, existingContext: Option[AkkaHttpWebContext] = None): Directive1[AkkaHttpWebContext] =
-    new Directive1[AkkaHttpWebContext] {
-      override def tapply(innerRoute: Tuple1[AkkaHttpWebContext] => Route): Route = { ctx =>
-        import ctx.materializer
+  def withContext(existingContext: Option[AkkaHttpWebContext] = None, formParams: Map[String, String] = Map.empty): Directive1[AkkaHttpWebContext] =
+    Directive[Tuple1[AkkaHttpWebContext]] { inner => ctx =>
+      val akkaWebContext = existingContext.getOrElse(AkkaHttpWebContext(ctx.request, formParams.toSeq, sessionStorage))
+      inner(Tuple1(akkaWebContext))(ctx).map[RouteResult] {
+        case Complete(response) => Complete(applyHeadersAndCookiesToResponse(akkaWebContext.getChanges)(response))
+        case rejection => rejection
+      }
+    }
 
-        getFormFields(ctx.request.entity, enforceFormEncoding).flatMap { formParams =>
-          val akkaWebContext = existingContext.getOrElse(AkkaHttpWebContext(ctx.request, formParams, sessionStorage))
-          innerRoute(Tuple1(akkaWebContext))(ctx).map[RouteResult] {
-            case Complete(response) => Complete(applyHeadersAndCookiesToResponse(akkaWebContext.getChanges)(response))
-            case rejection => rejection
-          }
-        }
+  def withFormParameters(enforceFormEncoding: Boolean): Directive1[Map[String, String]] =
+    Directive[Tuple1[Map[String, String]]] { inner => ctx =>
+      import ctx.materializer
+      getFormFields(ctx.request.entity, enforceFormEncoding).flatMap { params =>
+        inner(Tuple1(params.toMap))(ctx)
       }
     }
 
@@ -118,17 +120,14 @@ class AkkaHttpSecurity(config: Config, sessionStorage: SessionStorage)(implicit 
   def withAuthentication(
                           clients: String = null /* Default null, meaning all defined clients */ ,
                           multiProfile: Boolean = true,
-                          enforceFormEncoding: Boolean = false, //Force form parameters to be passed for authentication or the request fails
                           authorizers: String = ""
                         ): Directive1[AuthenticatedRequest] =
-    withContext(enforceFormEncoding).flatMap { akkaWebContext =>
-      new Directive1[AuthenticatedRequest] {
-        override def tapply(innerRoute: Tuple1[AuthenticatedRequest] => Route): Route = { ctx =>
-          securityLogic.perform(akkaWebContext, config, (context: AkkaHttpWebContext, profiles: util.Collection[CommonProfile], parameters: AnyRef) => {
-            val authenticatedRequest = AuthenticatedRequest(context, profiles.asScala.toList)
-            innerRoute(Tuple1(authenticatedRequest))(ctx)
-          }, actionAdapter, clients, authorizers, "", multiProfile)
-        }
+    withContext().flatMap { akkaWebContext =>
+      Directive[Tuple1[AuthenticatedRequest]] { inner => ctx =>
+        securityLogic.perform(akkaWebContext, config, (context: AkkaHttpWebContext, profiles: util.Collection[CommonProfile], parameters: AnyRef) => {
+          val authenticatedRequest = AuthenticatedRequest(context, profiles.asScala.toList)
+          inner(Tuple1(authenticatedRequest))(ctx)
+        }, actionAdapter, clients, authorizers, "", multiProfile)
       }
     }
 
@@ -142,8 +141,9 @@ class AkkaHttpSecurity(config: Config, sessionStorage: SessionStorage)(implicit 
                enforceFormEncoding: Boolean = false,
                existingContext: Option[AkkaHttpWebContext] = None,
                setCsrfCookie: Boolean = true
-              ): Route = {
-    withContext(enforceFormEncoding, existingContext) { akkaWebContext => ctx =>
+              ): Route =
+  withFormParameters(enforceFormEncoding) { formParams =>
+    withContext(existingContext, formParams) { akkaWebContext => _ =>
       callbackLogic.perform(akkaWebContext, config, actionAdapter, defaultUrl, saveInSession, multiProfile, true, defaultClient.orNull)
         .map { result =>
           akkaWebContext.addResponseSessionCookie()
@@ -158,14 +158,14 @@ class AkkaHttpSecurity(config: Config, sessionStorage: SessionStorage)(implicit 
              localLogout: Boolean = true,
              destroySession: Boolean = true
             ): Route = {
-    withContext(enforceFormEncoding = false) { akkaWebContext => ctx =>
+    withContext() { akkaWebContext => ctx =>
         logoutLogic.perform(akkaWebContext, config, actionAdapter, defaultUrl, logoutPatternUrl, localLogout, destroySession, false)
     }
   }
 
-  def withAllClientsAuthentication(multiProfile: Boolean = true, enforceFormEncoding: Boolean = false): Directive1[AuthenticatedRequest] = {
+  def withAllClientsAuthentication(multiProfile: Boolean = true): Directive1[AuthenticatedRequest] = {
     val authorizers = config.getAuthorizers.keySet().asScala.mkString(",")
     val clients = config.getClients.findAllClients().asScala.map(_.getName).mkString(",")
-    withAuthentication(clients, multiProfile, enforceFormEncoding, authorizers)
+    withAuthentication(clients, multiProfile, authorizers)
   }
 }
