@@ -124,10 +124,14 @@ class AkkaHttpSecurity(config: Config, sessionStorage: SessionStorage)(implicit 
                         ): Directive1[AuthenticatedRequest] =
     withContext().flatMap { akkaWebContext =>
       Directive[Tuple1[AuthenticatedRequest]] { inner => ctx =>
-        securityLogic.perform(akkaWebContext, config, (context: AkkaHttpWebContext, profiles: util.Collection[CommonProfile], parameters: AnyRef) => {
-          val authenticatedRequest = AuthenticatedRequest(context, profiles.asScala.toList)
-          inner(Tuple1(authenticatedRequest))(ctx)
-        }, actionAdapter, clients, authorizers, "", multiProfile)
+        // TODO This is a hack to ensure that any underlying Futures are scheduled (and handled in case of errors) from here
+        // TODO Fix this properly
+        Future.successful(()).flatMap { _ =>
+            securityLogic.perform(akkaWebContext, config, (context: AkkaHttpWebContext, profiles: util.Collection[CommonProfile], parameters: AnyRef) => {
+              val authenticatedRequest = AuthenticatedRequest(context, profiles.asScala.toList)
+              inner(Tuple1(authenticatedRequest))(ctx)
+            }, actionAdapter, clients, authorizers, "", multiProfile)
+          }
       }
     }
 
