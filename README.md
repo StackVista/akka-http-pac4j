@@ -3,6 +3,12 @@
 ## akka-http-pac4j ##
 A wrapper around pac4j (www.pac4j.org) built using AkkaHTTP
 
+## how to use it ##
+
+Here is a demo project showing how to configure akka-http-pac4j for SAML & LDAP: https://github.com/vidma/akka-http-pac4j-demo
+
+Many other auth methods supported by pac4j should work too, see  https://github.com/pac4j/play-pac4j-scala-demo/blob/master/app/modules/SecurityModule.scala for more examples
+
 ## One time publishing configuration
 
 - Set Sonatype account information
