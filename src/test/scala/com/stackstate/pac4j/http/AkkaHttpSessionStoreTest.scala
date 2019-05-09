@@ -11,13 +11,13 @@ class AkkaHttpSessionStoreTest extends WordSpecLike with Matchers with Scalatest
   "AkkaHttpSessionStore.get" should {
     "return null when the data is not available" in {
       new AkkaHttpSessionStore().get(
-        new AkkaHttpWebContext(HttpRequest(), Seq.empty, new ForgetfulSessionStorage),
+        new AkkaHttpWebContext(HttpRequest(), Seq.empty, new ForgetfulSessionStorage, AkkaHttpWebContext.DEFAULT_COOKIE_NAME),
         "mykey"
       ) shouldBe null
     }
 
     "return the data when available" in {
-      val context = new AkkaHttpWebContext(HttpRequest(), Seq.empty, new InMemorySessionStorage(30.minutes))
+      val context = new AkkaHttpWebContext(HttpRequest(), Seq.empty, new InMemorySessionStorage(30.minutes), AkkaHttpWebContext.DEFAULT_COOKIE_NAME)
       new AkkaHttpSessionStore().set(context, "mykey", "yooo")
       new AkkaHttpSessionStore().get(context, "mykey") shouldBe "yooo"
     }

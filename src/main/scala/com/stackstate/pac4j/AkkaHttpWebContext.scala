@@ -19,7 +19,9 @@ import scala.collection.JavaConverters._
  */
 case class AkkaHttpWebContext(request: HttpRequest,
                               formFields: Seq[(String, String)],
-                              private[pac4j] val sessionStorage: SessionStorage) extends WebContext {
+                              private[pac4j] val sessionStorage: SessionStorage,
+                              sessionCookieName: String
+                             ) extends WebContext {
   import com.stackstate.pac4j.AkkaHttpWebContext._
 
   private var changes = ResponseChanges.empty
@@ -40,7 +42,7 @@ case class AkkaHttpWebContext(request: HttpRequest,
 
   private[pac4j] var sessionId: String =
     request.cookies
-      .filter(_.name == COOKIE_NAME)
+      .filter(_.name == sessionCookieName)
       .map(_.value)
       .find(session => sessionStorage.sessionExists(session))
       .getOrElse(newSession())
@@ -168,7 +170,7 @@ case class AkkaHttpWebContext(request: HttpRequest,
   def getChanges: ResponseChanges = changes
 
   def addResponseSessionCookie(): Unit = {
-    val cookie = new Cookie(COOKIE_NAME, sessionId)
+    val cookie = new Cookie(sessionCookieName, sessionId)
     cookie.setSecure(isSecure)
     cookie.setMaxAge(sessionStorage.sessionLifetime.toSeconds.toInt)
     cookie.setHttpOnly(true)
@@ -195,5 +197,5 @@ object AkkaHttpWebContext {
     }
   }
 
-  private[pac4j] val COOKIE_NAME = "AkkaHttpPac4jSession"
+  private[pac4j] val DEFAULT_COOKIE_NAME = "AkkaHttpPac4jSession"
 }

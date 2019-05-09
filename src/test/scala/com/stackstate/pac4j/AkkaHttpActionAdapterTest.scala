@@ -42,6 +42,6 @@ class AkkaHttpActionAdapterTest extends WordSpecLike with Matchers with ScalaFut
   }
   
   def withContext(f: AkkaHttpWebContext => Unit) = {
-    f(AkkaHttpWebContext(HttpRequest(), Seq.empty, new ForgetfulSessionStorage))
+    f(AkkaHttpWebContext(HttpRequest(), Seq.empty, new ForgetfulSessionStorage, AkkaHttpWebContext.DEFAULT_COOKIE_NAME))
   }
 }
