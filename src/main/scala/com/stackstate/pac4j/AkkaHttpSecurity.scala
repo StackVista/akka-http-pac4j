@@ -64,7 +64,7 @@ object AkkaHttpSecurity {
   }
 }
 
-class AkkaHttpSecurity(config: Config, sessionStorage: SessionStorage, sessionCookieName: String = AkkaHttpWebContext.DEFAULT_COOKIE_NAME)(implicit val executionContext: ExecutionContext) {
+class AkkaHttpSecurity(config: Config, sessionStorage: SessionStorage, val sessionCookieName: String = AkkaHttpWebContext.DEFAULT_COOKIE_NAME)(implicit val executionContext: ExecutionContext) {
 
   import AkkaHttpSecurity._
 
