@@ -3,7 +3,7 @@ import Dependencies._
 lazy val root = (project in file(".")).
   settings(
     inThisBuild(List(
-      organization := "com.stackstate",
+      organization := "io.kensu.forks",
       scalaVersion := "2.12.4",
       version      := "0.5.0-SNAPSHOT"
     )),
@@ -42,13 +42,13 @@ pgpReadOnly := false
 
 publishMavenStyle := true
 
-publishTo := {
-  val nexus = "https://oss.sonatype.org/"
-  if (isSnapshot.value)
-    Some("snapshots" at nexus + "content/repositories/snapshots")
-  else
-    Some("releases"  at nexus + "service/local/staging/deploy/maven2")
-}
+// publishTo := {
+//   val nexus = "https://oss.sonatype.org/"
+//   if (isSnapshot.value)
+//     Some("snapshots" at nexus + "content/repositories/snapshots")
+//   else
+//     Some("releases"  at nexus + "service/local/staging/deploy/maven2")
+// }
 
 pomIncludeRepository := { _ => false }
 
