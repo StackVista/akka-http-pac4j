@@ -4,18 +4,13 @@ lazy val root = (project in file(".")).
   settings(
     inThisBuild(List(
       organization := "io.kensu-oss",
-      scalaVersion := "2.12.4",
-      version      := "0.5.0-SNAPSHOT"
+      scalaVersion := "2.11.12",
+      version      := "0.5.0-SNAPSHOT",
+      artifactClassifier := Some(s"akka-http-$akkaHttpBaseVersion")
     )),
     name := "akka-http-pac4j",
-    libraryDependencies ++= Seq(
-      akkaHttp,
-      akkaStreams,
-      pac4j,
-      scalaTestCore % Test,
-      scalacheck % Test,
-      akkaHttpTestKit % Test
-    ),
+    libraryDependencies ++= Dependencies.dependencies,
+
       scalacOptions ++= Seq(
   "-deprecation",           
   "-encoding", "UTF-8",
@@ -36,7 +31,7 @@ lazy val root = (project in file(".")).
     )
   )
 
-crossScalaVersions := Seq("2.11.12", scalaVersion.value)
+crossScalaVersions := Seq("2.12.4", scalaVersion.value)
 
 pgpReadOnly := false
 

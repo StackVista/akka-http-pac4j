@@ -150,7 +150,7 @@ class AkkaHttpSecurityTest extends WordSpecLike with Matchers with ScalatestRout
       val postRequest = HttpRequest(
         HttpMethods.POST,
         "/",
-        entity = HttpEntity(ContentType(MediaTypes.`application/x-www-form-urlencoded`, HttpCharsets.`UTF-8`), "username=testuser".getBytes)
+        entity = HttpEntity(ContentType(MediaTypes.`application/x-www-form-urlencoded`, () => HttpCharsets.`UTF-8`), "username=testuser".getBytes)
       )
 
       postRequest ~> akkaHttpSecurity.withFormParameters(enforceFormEncoding = false) { params =>
