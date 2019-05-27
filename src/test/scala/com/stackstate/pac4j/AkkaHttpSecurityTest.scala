@@ -4,12 +4,20 @@ import java.{lang, util}
 
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.server.Directives._
-import akka.http.scaladsl.server.{AuthorizationFailedRejection, RouteResult}
+import akka.http.scaladsl.server.{AuthorizationFailedRejection, RequestContext, Route, RouteResult}
+import akka.http.scaladsl.model._
+import com.stackstate.pac4j.AkkaHttpSecurity.{AkkaHttpCallbackLogic, AkkaHttpLogoutLogic, AkkaHttpSecurityLogic}
+import org.pac4j.core.config.Config
+import org.pac4j.core.http.adapter.HttpActionAdapter
+import org.pac4j.core.context.{Cookie, Pac4jConstants, WebContext}
+import org.scalatest.{Matchers, WordSpecLike}
+import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.RouteResult.Complete
 import akka.http.scaladsl.testkit.ScalatestRouteTest
 import com.stackstate.pac4j.AkkaHttpSecurity.{AkkaHttpCallbackLogic, AkkaHttpLogoutLogic, AkkaHttpSecurityLogic}
 import com.stackstate.pac4j.http.AkkaHttpActionAdapter
 import com.stackstate.pac4j.store.{ForgetfulSessionStorage, InMemorySessionStorage}
+import org.pac4j.core.authorization.authorizer.Authorizer
 import org.pac4j.core.client.{Clients, IndirectClient}
 import org.pac4j.core.config.Config
 import org.pac4j.core.context.{Cookie, Pac4jConstants, WebContext}
@@ -202,7 +210,7 @@ class AkkaHttpSecurityTest extends WordSpecLike with Matchers with ScalatestRout
 
     "run the callbackLogic reusing an akka http context" in {
       val config = new Config()
-      val existingContext = AkkaHttpWebContext(HttpRequest(), Seq.empty, new ForgetfulSessionStorage)
+      val existingContext = AkkaHttpWebContext(HttpRequest(), Seq.empty, new ForgetfulSessionStorage, AkkaHttpWebContext.DEFAULT_COOKIE_NAME)
 
       val actionAdapter = new HttpActionAdapter[HttpResponse, AkkaHttpWebContext] {
         override def adapt(code: Int, context: AkkaHttpWebContext): HttpResponse = ???
@@ -235,14 +243,17 @@ class AkkaHttpSecurityTest extends WordSpecLike with Matchers with ScalatestRout
   "AkkaHttpSecurity.authorize" should {
     "pass the provided authenticationRequest to the authorizer" in {
       val profile = new CommonProfile()
-      val context = AkkaHttpWebContext(HttpRequest(), Seq.empty, new ForgetfulSessionStorage)
+      val context = AkkaHttpWebContext(HttpRequest(), Seq.empty, new ForgetfulSessionStorage, AkkaHttpWebContext.DEFAULT_COOKIE_NAME)
 
-      val route =
-        AkkaHttpSecurity.authorize((context: WebContext, profiles: util.List[CommonProfile]) => {
+      val authorizer = new Authorizer[CommonProfile] {
+        override def isAuthorized(context: WebContext, profiles: util.List[CommonProfile]): Boolean = {
           profiles.size() shouldBe 1
           profiles.get(0) shouldBe profile
           false
-        })(AuthenticatedRequest(context, List(profile))) {
+        }
+      }
+      val route: Route =
+        AkkaHttpSecurity.authorize(authorizer)(AuthenticatedRequest(context, List(profile))) {
           complete("oops!")
         }
 
@@ -250,12 +261,13 @@ class AkkaHttpSecurityTest extends WordSpecLike with Matchers with ScalatestRout
     }
 
     "reject when authorization fails" in {
-      val context = AkkaHttpWebContext(HttpRequest(), Seq.empty, new ForgetfulSessionStorage)
+      val context = AkkaHttpWebContext(HttpRequest(), Seq.empty, new ForgetfulSessionStorage, AkkaHttpWebContext.DEFAULT_COOKIE_NAME)
 
+      val authorizer = new Authorizer[CommonProfile] {
+        override def isAuthorized(context: WebContext, profiles: util.List[CommonProfile]): Boolean = false
+      }
       val route =
-        AkkaHttpSecurity.authorize((context: WebContext, profiles: util.List[CommonProfile]) => {
-          false
-        })(AuthenticatedRequest(context, List.empty)) {
+        AkkaHttpSecurity.authorize(authorizer)(AuthenticatedRequest(context, List.empty)) {
           complete("oops!")
         }
 
@@ -263,12 +275,13 @@ class AkkaHttpSecurityTest extends WordSpecLike with Matchers with ScalatestRout
     }
 
     "succeed when authorization succeeded" in {
-      val context = AkkaHttpWebContext(HttpRequest(), Seq.empty, new ForgetfulSessionStorage)
+      val context = AkkaHttpWebContext(HttpRequest(), Seq.empty, new ForgetfulSessionStorage, AkkaHttpWebContext.DEFAULT_COOKIE_NAME)
 
+      val authorizer = new Authorizer[CommonProfile] {
+        override def isAuthorized(context: WebContext, profiles: util.List[CommonProfile]): Boolean = true
+      }
       val route =
-        AkkaHttpSecurity.authorize((context: WebContext, profiles: util.List[CommonProfile]) => {
-          true
-        })(AuthenticatedRequest(context, List.empty)) {
+        AkkaHttpSecurity.authorize(authorizer)(AuthenticatedRequest(context, List.empty)) {
           complete("cool!")
         }
 

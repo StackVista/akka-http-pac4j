@@ -64,7 +64,7 @@ object AkkaHttpSecurity {
   }
 }
 
-class AkkaHttpSecurity(config: Config, sessionStorage: SessionStorage)(implicit val executionContext: ExecutionContext) {
+class AkkaHttpSecurity(config: Config, sessionStorage: SessionStorage, val sessionCookieName: String = AkkaHttpWebContext.DEFAULT_COOKIE_NAME)(implicit val executionContext: ExecutionContext) {
 
   import AkkaHttpSecurity._
 
@@ -98,7 +98,7 @@ class AkkaHttpSecurity(config: Config, sessionStorage: SessionStorage)(implicit 
     */
   def withContext(existingContext: Option[AkkaHttpWebContext] = None, formParams: Map[String, String] = Map.empty): Directive1[AkkaHttpWebContext] =
     Directive[Tuple1[AkkaHttpWebContext]] { inner => ctx =>
-      val akkaWebContext = existingContext.getOrElse(AkkaHttpWebContext(ctx.request, formParams.toSeq, sessionStorage))
+      val akkaWebContext = existingContext.getOrElse(AkkaHttpWebContext(ctx.request, formParams.toSeq, sessionStorage, sessionCookieName = sessionCookieName))
       inner(Tuple1(akkaWebContext))(ctx).map[RouteResult] {
         case Complete(response) => Complete(applyHeadersAndCookiesToResponse(akkaWebContext.getChanges)(response))
         case rejection => rejection
@@ -127,11 +127,14 @@ class AkkaHttpSecurity(config: Config, sessionStorage: SessionStorage)(implicit 
         // TODO This is a hack to ensure that any underlying Futures are scheduled (and handled in case of errors) from here
         // TODO Fix this properly
         Future.successful(()).flatMap { _ =>
-            securityLogic.perform(akkaWebContext, config, (context: AkkaHttpWebContext, profiles: util.Collection[CommonProfile], parameters: AnyRef) => {
+          val securityGrantedAccessAdapter = new SecurityGrantedAccessAdapter[Future[RouteResult], AkkaHttpWebContext] {
+            override def adapt(context: AkkaHttpWebContext, profiles: util.Collection[CommonProfile], parameters: AnyRef*): Future[RouteResult] = {
               val authenticatedRequest = AuthenticatedRequest(context, profiles.asScala.toList)
               inner(Tuple1(authenticatedRequest))(ctx)
-            }, actionAdapter, clients, authorizers, "", multiProfile)
+            }
           }
+          securityLogic.perform(akkaWebContext, config, securityGrantedAccessAdapter, actionAdapter, clients, authorizers, "", multiProfile)
+        }
       }
     }
 
