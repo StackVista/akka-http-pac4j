@@ -3,7 +3,7 @@ import Dependencies._
 lazy val root = (project in file(".")).
   settings(
     inThisBuild(List(
-      organization := "io.kensu.forks",
+      organization := "io.kensu-oss",
       scalaVersion := "2.12.4",
       version      := "0.5.0-SNAPSHOT"
     )),
