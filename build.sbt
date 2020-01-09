@@ -5,7 +5,7 @@ lazy val root = (project in file(".")).
     inThisBuild(List(
       organization := "io.kensu-oss",
       scalaVersion := "2.11.12",
-      version      := "0.5.2",
+      version      := "0.6.0-SNAPSHOT",
       artifactClassifier := Some(s"akka-http-$akkaHttpBaseVersion")
     )),
     name := "akka-http-pac4j",
@@ -30,6 +30,8 @@ lazy val root = (project in file(".")).
       "-Xfatal-warnings"
     )
   )
+
+publishArtifact in (Compile, packageSrc) := true
 
 crossScalaVersions := Seq("2.12.4", scalaVersion.value)
 

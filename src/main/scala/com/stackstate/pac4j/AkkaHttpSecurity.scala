@@ -163,10 +163,11 @@ class AkkaHttpSecurity(config: Config, sessionStorage: SessionStorage, val sessi
   def logout(defaultUrl: String = Pac4jConstants.DEFAULT_URL_VALUE,
              logoutPatternUrl: String = Pac4jConstants.DEFAULT_LOGOUT_URL_PATTERN_VALUE,
              localLogout: Boolean = true,
-             destroySession: Boolean = true
+             destroySession: Boolean = true,
+             centralLogout: Boolean = false
             ): Route = {
     withContext() { akkaWebContext => ctx =>
-        logoutLogic.perform(akkaWebContext, config, actionAdapter, defaultUrl, logoutPatternUrl, localLogout, destroySession, false)
+        logoutLogic.perform(akkaWebContext, config, actionAdapter, defaultUrl, logoutPatternUrl, localLogout, destroySession, centralLogout)
     }
   }
 
