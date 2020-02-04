@@ -5,7 +5,7 @@ lazy val root = (project in file(".")).
     inThisBuild(List(
       organization := "io.kensu-oss",
       scalaVersion := "2.11.12",
-      version      := "0.6.0",
+      version      := "0.7.0-SNAPSHOT",
       artifactClassifier := Some(s"akka-http-$akkaHttpBaseVersion")
     )),
     name := "akka-http-pac4j",
