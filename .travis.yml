@@ -1,4 +1,5 @@
 language: scala
+dist: trusty # If unspecified uses Xenial images, which no longer support oraclejdk8
 sudo: false
 
 matrix:
