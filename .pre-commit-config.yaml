@@ -24,4 +24,4 @@ repos:
     hooks:
       - id: scalafmt
         stages: [commit]
-        args: [-c .scalafmt.conf, -d./bin, -v2.4.2]
+        args: [-c .scalafmt.conf, -d./bin, -v2.4.2, -oorg.scalameta]
