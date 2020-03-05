@@ -35,3 +35,5 @@ out/
 *.sublime*
 *.sublime-project
 *.sublime-workspace
+
+bin/
