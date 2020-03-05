@@ -46,7 +46,15 @@ class AkkaHttpSecurityTest extends WordSpecLike with Matchers with ScalatestRout
 
       config.setHttpActionAdapter(actionAdapter)
       config.setSecurityLogic(new AkkaHttpSecurityLogic {
-        override def perform(context: AkkaHttpWebContext, config: Config, securityGrantedAccessAdapter: SecurityGrantedAccessAdapter[Future[RouteResult], AkkaHttpWebContext], httpActionAdapter: HttpActionAdapter[Future[RouteResult], AkkaHttpWebContext], clients: String, authorizers: String, matchers: String, multiProfile: lang.Boolean, parameters: AnyRef*): Future[RouteResult] = {
+        override def perform(context: AkkaHttpWebContext,
+                             config: Config,
+                             securityGrantedAccessAdapter: SecurityGrantedAccessAdapter[Future[RouteResult], AkkaHttpWebContext],
+                             httpActionAdapter: HttpActionAdapter[Future[RouteResult], AkkaHttpWebContext],
+                             clients: String,
+                             authorizers: String,
+                             matchers: String,
+                             multiProfile: lang.Boolean,
+                             parameters: AnyRef*): Future[RouteResult] = {
           clients shouldBe "myclients"
           matchers shouldBe "" // Empty string means always matching hit in RequireAllMatchersChecker.java
           authorizers shouldBe "myauthorizers" // Empty string means always authorize in DefaultAuthorizationCheck.java
@@ -59,7 +67,9 @@ class AkkaHttpSecurityTest extends WordSpecLike with Matchers with ScalatestRout
 
       val akkaHttpSecurity = new AkkaHttpSecurity(config, new ForgetfulSessionStorage)
 
-      Get("/") ~> akkaHttpSecurity.withAuthentication("myclients", multiProfile = false, authorizers = "myauthorizers") { _ => complete("problem!") } ~> check {
+      Get("/") ~> akkaHttpSecurity.withAuthentication("myclients", multiProfile = false, authorizers = "myauthorizers") { _ =>
+        complete("problem!")
+      } ~> check {
         status shouldEqual StatusCodes.OK
         responseAs[String] shouldBe "called!"
       }
@@ -70,7 +80,15 @@ class AkkaHttpSecurityTest extends WordSpecLike with Matchers with ScalatestRout
       val profile = new CommonProfile()
 
       config.setSecurityLogic(new AkkaHttpSecurityLogic {
-        override def perform(context: AkkaHttpWebContext, config: Config, securityGrantedAccessAdapter: SecurityGrantedAccessAdapter[Future[RouteResult], AkkaHttpWebContext], httpActionAdapter: HttpActionAdapter[Future[RouteResult], AkkaHttpWebContext], clients: String, authorizers: String, matchers: String, multiProfile: lang.Boolean, parameters: AnyRef*): Future[RouteResult] = {
+        override def perform(context: AkkaHttpWebContext,
+                             config: Config,
+                             securityGrantedAccessAdapter: SecurityGrantedAccessAdapter[Future[RouteResult], AkkaHttpWebContext],
+                             httpActionAdapter: HttpActionAdapter[Future[RouteResult], AkkaHttpWebContext],
+                             clients: String,
+                             authorizers: String,
+                             matchers: String,
+                             multiProfile: lang.Boolean,
+                             parameters: AnyRef*): Future[RouteResult] = {
           securityGrantedAccessAdapter.adapt(context, List(profile).asJava)
         }
       })
@@ -139,11 +157,8 @@ class AkkaHttpSecurityTest extends WordSpecLike with Matchers with ScalatestRout
       val config = new Config()
       val akkaHttpSecurity = new AkkaHttpSecurity(config, new ForgetfulSessionStorage)
 
-      val postRequest = HttpRequest(
-        HttpMethods.POST,
-        "/",
-        entity = HttpEntity(ContentType(MediaTypes.`application/x-www-form-urlencoded`, HttpCharsets.`UTF-8`), "username=testuser".getBytes)
-      )
+      val postRequest =
+        HttpRequest(HttpMethods.POST, "/", entity = HttpEntity(MediaTypes.`application/x-www-form-urlencoded`, "username=testuser".getBytes))
 
       postRequest ~> akkaHttpSecurity.withFormParameters(enforceFormEncoding = false) { params =>
         params("username") shouldEqual "testuser"
@@ -158,13 +173,11 @@ class AkkaHttpSecurityTest extends WordSpecLike with Matchers with ScalatestRout
       val config = new Config()
       val akkaHttpSecurity = new AkkaHttpSecurity(config, new ForgetfulSessionStorage)
 
-      val postRequest = HttpRequest(
-        HttpMethods.POST,
-        "/",
-        entity = HttpEntity(ContentType(MediaTypes.`application/json`), "".getBytes)
-      )
+      val postRequest = HttpRequest(HttpMethods.POST, "/", entity = HttpEntity(ContentType(MediaTypes.`application/json`), "".getBytes))
 
-      postRequest ~> akkaHttpSecurity.withFormParameters(enforceFormEncoding = true) { _ => fail("perform should never be called!") } ~> check {
+      postRequest ~> akkaHttpSecurity.withFormParameters(enforceFormEncoding = true) { _ =>
+        fail("perform should never be called!")
+      } ~> check {
         status shouldEqual StatusCodes.InternalServerError
       }
     }
@@ -180,7 +193,14 @@ class AkkaHttpSecurityTest extends WordSpecLike with Matchers with ScalatestRout
 
       config.setHttpActionAdapter(actionAdapter)
       config.setCallbackLogic(new AkkaHttpCallbackLogic {
-        override def perform(context: AkkaHttpWebContext, config: Config, httpActionAdapter: HttpActionAdapter[Future[RouteResult], AkkaHttpWebContext], defaultUrl: String, saveInSession: lang.Boolean, multiProfile: lang.Boolean, renewSession: lang.Boolean, client: String): Future[RouteResult] = {
+        override def perform(context: AkkaHttpWebContext,
+                             config: Config,
+                             httpActionAdapter: HttpActionAdapter[Future[RouteResult], AkkaHttpWebContext],
+                             defaultUrl: String,
+                             saveInSession: lang.Boolean,
+                             multiProfile: lang.Boolean,
+                             renewSession: lang.Boolean,
+                             client: String): Future[RouteResult] = {
           httpActionAdapter shouldBe actionAdapter
           defaultUrl shouldBe "/blaat"
           saveInSession shouldBe false
@@ -210,7 +230,14 @@ class AkkaHttpSecurityTest extends WordSpecLike with Matchers with ScalatestRout
 
       config.setHttpActionAdapter(actionAdapter)
       config.setCallbackLogic(new AkkaHttpCallbackLogic {
-        override def perform(context: AkkaHttpWebContext, config: Config, httpActionAdapter: HttpActionAdapter[Future[RouteResult], AkkaHttpWebContext], defaultUrl: String, saveInSession: lang.Boolean, multiProfile: lang.Boolean, renewSession: lang.Boolean, client: String): Future[RouteResult] = {
+        override def perform(context: AkkaHttpWebContext,
+                             config: Config,
+                             httpActionAdapter: HttpActionAdapter[Future[RouteResult], AkkaHttpWebContext],
+                             defaultUrl: String,
+                             saveInSession: lang.Boolean,
+                             multiProfile: lang.Boolean,
+                             renewSession: lang.Boolean,
+                             client: String): Future[RouteResult] = {
           existingContext.sessionId shouldBe context.sessionId
           httpActionAdapter shouldBe actionAdapter
           defaultUrl shouldBe "/blaat"
@@ -225,7 +252,8 @@ class AkkaHttpSecurityTest extends WordSpecLike with Matchers with ScalatestRout
 
       val akkaHttpSecurity = new AkkaHttpSecurity(config, new ForgetfulSessionStorage)
 
-      Get("/") ~> akkaHttpSecurity.callback("/blaat", saveInSession = false, multiProfile = false, Some("Yooo"), existingContext = Some(existingContext)) ~> check {
+      Get("/") ~> akkaHttpSecurity
+        .callback("/blaat", saveInSession = false, multiProfile = false, Some("Yooo"), existingContext = Some(existingContext)) ~> check {
         status shouldEqual StatusCodes.OK
         responseAs[String] shouldBe "called!"
       }
@@ -285,7 +313,14 @@ class AkkaHttpSecurityTest extends WordSpecLike with Matchers with ScalatestRout
 
       config.setHttpActionAdapter(AkkaHttpActionAdapter)
       config.setLogoutLogic(new AkkaHttpLogoutLogic {
-        override def perform(context: AkkaHttpWebContext, config: Config, httpActionAdapter: HttpActionAdapter[Future[RouteResult], AkkaHttpWebContext], defaultUrl: String, logoutUrlPattern: String, localLogout: lang.Boolean, destroySession: lang.Boolean, centralLogout: lang.Boolean): Future[RouteResult] = {
+        override def perform(context: AkkaHttpWebContext,
+                             config: Config,
+                             httpActionAdapter: HttpActionAdapter[Future[RouteResult], AkkaHttpWebContext],
+                             defaultUrl: String,
+                             logoutUrlPattern: String,
+                             localLogout: lang.Boolean,
+                             destroySession: lang.Boolean,
+                             centralLogout: lang.Boolean): Future[RouteResult] = {
           httpActionAdapter shouldBe AkkaHttpActionAdapter
           defaultUrl shouldBe "/home"
           logoutUrlPattern shouldBe "*"
@@ -312,12 +347,20 @@ class AkkaHttpSecurityTest extends WordSpecLike with Matchers with ScalatestRout
       }
 
       val logoutLogic = new DefaultLogoutLogic[Future[RouteResult], AkkaHttpWebContext] {
-        override def perform(context: AkkaHttpWebContext, config: Config, httpActionAdapter: HttpActionAdapter[Future[RouteResult], AkkaHttpWebContext], defaultUrl: String, inputLogoutUrlPattern: String, inputLocalLogout: lang.Boolean, inputDestroySession: lang.Boolean, inputCentralLogout: lang.Boolean): Future[RouteResult] = {
+        override def perform(context: AkkaHttpWebContext,
+                             config: Config,
+                             httpActionAdapter: HttpActionAdapter[Future[RouteResult], AkkaHttpWebContext],
+                             defaultUrl: String,
+                             inputLogoutUrlPattern: String,
+                             inputLocalLogout: lang.Boolean,
+                             inputDestroySession: lang.Boolean,
+                             inputCentralLogout: lang.Boolean): Future[RouteResult] = {
 
           context.sessionStorage.setSessionValue(context.sessionId, Pac4jConstants.USER_PROFILES, "Profile")
           context.sessionStorage.getSessionValue(context.sessionId, Pac4jConstants.USER_PROFILES) contains "Profile"
 
-          val response = super.perform(context, config, httpActionAdapter, defaultUrl, inputLogoutUrlPattern, inputLocalLogout, inputDestroySession, inputCentralLogout)
+          val response = super
+            .perform(context, config, httpActionAdapter, defaultUrl, inputLogoutUrlPattern, inputLocalLogout, inputDestroySession, inputCentralLogout)
           context.sessionStorage.getSessionValue(context.sessionId, Pac4jConstants.USER_PROFILES) shouldBe empty
 
           response
