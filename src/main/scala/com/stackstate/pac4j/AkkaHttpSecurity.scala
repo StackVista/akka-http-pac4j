@@ -64,7 +64,7 @@ object AkkaHttpSecurity {
   }
 }
 
-class AkkaHttpSecurity(config: Config, sessionStorage: SessionStorage)(implicit val executionContext: ExecutionContext) {
+class AkkaHttpSecurity(config: Config, sessionStorage: SessionStorage, val sessionCookieName: String = AkkaHttpWebContext.DEFAULT_COOKIE_NAME)(implicit val executionContext: ExecutionContext) {
 
   import AkkaHttpSecurity._
 
@@ -98,7 +98,7 @@ class AkkaHttpSecurity(config: Config, sessionStorage: SessionStorage)(implicit 
     */
   def withContext(existingContext: Option[AkkaHttpWebContext] = None, formParams: Map[String, String] = Map.empty): Directive1[AkkaHttpWebContext] =
     Directive[Tuple1[AkkaHttpWebContext]] { inner => ctx =>
-      val akkaWebContext = existingContext.getOrElse(AkkaHttpWebContext(ctx.request, formParams.toSeq, sessionStorage))
+      val akkaWebContext = existingContext.getOrElse(AkkaHttpWebContext(ctx.request, formParams.toSeq, sessionStorage, sessionCookieName = sessionCookieName))
       inner(Tuple1(akkaWebContext))(ctx).map[RouteResult] {
         case Complete(response) => Complete(applyHeadersAndCookiesToResponse(akkaWebContext.getChanges)(response))
         case rejection => rejection

@@ -222,7 +222,7 @@ class AkkaHttpSecurityTest extends WordSpecLike with Matchers with ScalatestRout
 
     "run the callbackLogic reusing an akka http context" in {
       val config = new Config()
-      val existingContext = AkkaHttpWebContext(HttpRequest(), Seq.empty, new ForgetfulSessionStorage)
+      val existingContext = AkkaHttpWebContext(HttpRequest(), Seq.empty, new ForgetfulSessionStorage, AkkaHttpWebContext.DEFAULT_COOKIE_NAME)
 
       val actionAdapter = new HttpActionAdapter[HttpResponse, AkkaHttpWebContext] {
         override def adapt(code: Int, context: AkkaHttpWebContext): HttpResponse = ???
@@ -263,7 +263,7 @@ class AkkaHttpSecurityTest extends WordSpecLike with Matchers with ScalatestRout
   "AkkaHttpSecurity.authorize" should {
     "pass the provided authenticationRequest to the authorizer" in {
       val profile = new CommonProfile()
-      val context = AkkaHttpWebContext(HttpRequest(), Seq.empty, new ForgetfulSessionStorage)
+      val context = AkkaHttpWebContext(HttpRequest(), Seq.empty, new ForgetfulSessionStorage, AkkaHttpWebContext.DEFAULT_COOKIE_NAME)
 
       val route =
         AkkaHttpSecurity.authorize((context: WebContext, profiles: util.List[CommonProfile]) => {
@@ -278,7 +278,7 @@ class AkkaHttpSecurityTest extends WordSpecLike with Matchers with ScalatestRout
     }
 
     "reject when authorization fails" in {
-      val context = AkkaHttpWebContext(HttpRequest(), Seq.empty, new ForgetfulSessionStorage)
+      val context = AkkaHttpWebContext(HttpRequest(), Seq.empty, new ForgetfulSessionStorage, AkkaHttpWebContext.DEFAULT_COOKIE_NAME)
 
       val route =
         AkkaHttpSecurity.authorize((context: WebContext, profiles: util.List[CommonProfile]) => {
@@ -291,7 +291,7 @@ class AkkaHttpSecurityTest extends WordSpecLike with Matchers with ScalatestRout
     }
 
     "succeed when authorization succeeded" in {
-      val context = AkkaHttpWebContext(HttpRequest(), Seq.empty, new ForgetfulSessionStorage)
+      val context = AkkaHttpWebContext(HttpRequest(), Seq.empty, new ForgetfulSessionStorage, AkkaHttpWebContext.DEFAULT_COOKIE_NAME)
 
       val route =
         AkkaHttpSecurity.authorize((context: WebContext, profiles: util.List[CommonProfile]) => {
