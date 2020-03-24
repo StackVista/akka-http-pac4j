@@ -12,6 +12,6 @@ object Dependencies {
   val scalacheckVersion = "1.14.3"
   val akkaHttpVersion = "10.1.9"
   val akkaStreamsVersion = "2.5.25"
-  val pac4jVersion = "3.4.0"
+  val pac4jVersion = "3.8.3"
   val scalaTestVersion = "3.0.5"
 }
