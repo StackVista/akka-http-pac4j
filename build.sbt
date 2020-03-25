@@ -1,7 +1,7 @@
 import Dependencies._
 
 lazy val root = (project in file(".")).settings(
-  inThisBuild(List(organization := "com.stackstate", scalaVersion := "2.12.4", version := "0.4.6")),
+  inThisBuild(List(organization := "com.stackstate", scalaVersion := "2.12.11", version := "0.4.6")),
   name := "akka-http-pac4j",
   libraryDependencies ++= Seq(akkaHttp, akkaStream, pac4j, scalaTestCore % Test, scalacheck % Test, akkaHttpTestKit % Test, akkaStreamTestKit % Test),
   scalacOptions ++= Seq(

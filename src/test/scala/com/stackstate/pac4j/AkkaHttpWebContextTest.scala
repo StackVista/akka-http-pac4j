@@ -9,6 +9,7 @@ import org.scalatest.{Matchers, WordSpecLike}
 
 import scala.collection.JavaConverters._
 import scala.concurrent.duration._
+import akka.http.scaladsl.model.headers.Location
 
 class AkkaHttpWebContextTest extends WordSpecLike with Matchers {
   lazy val cookie = ("cookieName", "cookieValue")
@@ -27,8 +28,9 @@ class AkkaHttpWebContextTest extends WordSpecLike with Matchers {
       webContext.getRequestHeader("FOO") shouldEqual "bar"
     }
 
-    "get the full url including port from a request" in withContext(url = "/views/#/something.html", hostAddress = "localhost", hostPort = 7070) { webContext =>
-      webContext.getFullRequestURL shouldEqual "http://localhost:7070/views/#/something.html"
+    "get the full url including port from a request" in withContext(url = "/views/#/something.html", hostAddress = "localhost", hostPort = 7070) {
+      webContext =>
+        webContext.getFullRequestURL shouldEqual "http://localhost:7070/views/#/something.html"
     }
 
     "get the full url excluding port from a request" in withContext(url = "/views", hostAddress = "localhost") { webContext =>
@@ -60,15 +62,27 @@ class AkkaHttpWebContextTest extends WordSpecLike with Matchers {
       webContext.getScheme shouldEqual "http"
     }
 
-    "get the request parameters or an empty string when no such parameter exists" in withContext(url = "www.stackstate.com/views?v=1234") { webContext =>
-      webContext.getRequestParameter("v") shouldEqual "1234"
-      webContext.getRequestParameter("p") shouldEqual null
+    "get the request parameters or an empty string when no such parameter exists" in withContext(url = "www.stackstate.com/views?v=1234") {
+      webContext =>
+        webContext.getRequestParameter("v") shouldEqual "1234"
+        webContext.getRequestParameter("p") shouldEqual null
     }
 
     "get/set request attributes" in withContext() { webContext =>
       webContext.setRequestAttribute("foo", "bar")
       webContext.getRequestAttribute("foo") shouldEqual "bar"
       webContext.getRequestAttribute("foozor") shouldEqual null
+    }
+
+    "set response header" in withContext() { webContext =>
+      webContext.setResponseHeader("Location", "/foo")
+      webContext.getChanges.headers shouldBe List(Location("/foo"))
+    }
+
+    "not set duplicate response header" in withContext() { webContext =>
+      webContext.setResponseHeader("Location", "/foo")
+      webContext.setResponseHeader("Location", "/bar")
+      webContext.getChanges.headers shouldBe List(Location("/bar"))
     }
 
     "get/set response content" in withContext() { webContext =>
@@ -106,8 +120,9 @@ class AkkaHttpWebContextTest extends WordSpecLike with Matchers {
           path = Some("/"),
           secure = false,
           httpOnly = true,
-          extension  = None
-        ))
+          extension = None
+        )
+      )
     }
 
     "don't add a cookie when the session was expired" in withContext(sessionStorage = new ForgetfulSessionStorage {
@@ -182,15 +197,14 @@ class AkkaHttpWebContextTest extends WordSpecLike with Matchers {
     }
   }
 
-  def withContext(
-                   requestHeaders: List[(String, String)] = List.empty,
-                   cookies: List[Cookie] = List.empty,
-                   url: String = "",
-                   scheme: String = "http",
-                   hostAddress: String = "",
-                   hostPort: Int = 0,
-                   formFields: Seq[(String, String)] = Seq.empty,
-                   sessionStorage: SessionStorage = new ForgetfulSessionStorage)(f: AkkaHttpWebContext => Unit): Unit = {
+  def withContext(requestHeaders: List[(String, String)] = List.empty,
+                  cookies: List[Cookie] = List.empty,
+                  url: String = "",
+                  scheme: String = "http",
+                  hostAddress: String = "",
+                  hostPort: Int = 0,
+                  formFields: Seq[(String, String)] = Seq.empty,
+                  sessionStorage: SessionStorage = new ForgetfulSessionStorage)(f: AkkaHttpWebContext => Unit): Unit = {
     val parsedHeaders: List[HttpHeader] = requestHeaders.map { case (k, v) => HttpHeader.parse(k, v) }.collect { case Ok(header, _) => header }
     val completeHeaders: List[HttpHeader] = parsedHeaders ++ cookies
     val uri = Uri(url).withScheme(scheme).withAuthority(hostAddress, hostPort)
