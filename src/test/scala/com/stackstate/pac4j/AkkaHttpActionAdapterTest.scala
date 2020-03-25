@@ -11,13 +11,19 @@ import org.scalatest.concurrent.ScalaFutures
 class AkkaHttpActionAdapterTest extends WordSpecLike with Matchers with ScalaFutures {
   "AkkaHttpActionAdapter" should {
     "convert 200 to OK" in withContext { context =>
-      AkkaHttpActionAdapter.adapt(200, context).futureValue.response shouldEqual HttpResponse(OK, Nil, HttpEntity(ContentTypes.`application/octet-stream`, ByteString("")))
+      AkkaHttpActionAdapter.adapt(200, context).futureValue.response shouldEqual HttpResponse(
+        OK,
+        Nil,
+        HttpEntity(ContentTypes.`application/octet-stream`, ByteString(""))
+      )
     }
     "convert 401 to Unauthorized" in withContext { context =>
       AkkaHttpActionAdapter.adapt(401, context).futureValue.response shouldEqual HttpResponse(Unauthorized)
+      context.getChanges.cookies.map(_.name) shouldBe List(AkkaHttpWebContext.DEFAULT_COOKIE_NAME)
     }
     "convert 302 to SeeOther (to support login flow)" in withContext { context =>
       AkkaHttpActionAdapter.adapt(302, context).futureValue.response shouldEqual HttpResponse(SeeOther)
+      context.getChanges.cookies.map(_.name) shouldBe List(AkkaHttpWebContext.DEFAULT_COOKIE_NAME)
     }
     "convert 400 to BadRequest" in withContext { context =>
       AkkaHttpActionAdapter.adapt(400, context).futureValue.response shouldEqual HttpResponse(BadRequest)
@@ -33,14 +39,16 @@ class AkkaHttpActionAdapterTest extends WordSpecLike with Matchers with ScalaFut
     }
     "convert 200 to OK with content set from the context" in withContext { context =>
       context.writeResponseContent("content")
-      AkkaHttpActionAdapter.adapt(200, context).futureValue.response shouldEqual HttpResponse.apply(OK, Nil, HttpEntity(ContentTypes.`application/octet-stream`, ByteString("content")))
+      AkkaHttpActionAdapter.adapt(200, context).futureValue.response shouldEqual HttpResponse
+        .apply(OK, Nil, HttpEntity(ContentTypes.`application/octet-stream`, ByteString("content")))
     }
     "convert 200 to OK with content type set from the context" in withContext { context =>
       context.setResponseContentType("application/json")
-      AkkaHttpActionAdapter.adapt(200, context).futureValue.response shouldEqual HttpResponse.apply(OK, Nil, HttpEntity(ContentTypes.`application/json`, ByteString("")))
+      AkkaHttpActionAdapter.adapt(200, context).futureValue.response shouldEqual HttpResponse
+        .apply(OK, Nil, HttpEntity(ContentTypes.`application/json`, ByteString("")))
     }
   }
-  
+
   def withContext(f: AkkaHttpWebContext => Unit) = {
     f(AkkaHttpWebContext(HttpRequest(), Seq.empty, new ForgetfulSessionStorage, AkkaHttpWebContext.DEFAULT_COOKIE_NAME))
   }

@@ -14,6 +14,9 @@ object AkkaHttpActionAdapter extends HttpActionAdapter[Future[RouteResult], Akka
   override def adapt(code: Int, context: AkkaHttpWebContext): Future[Complete] = {
     Future.successful(Complete(code match {
       case HttpConstants.UNAUTHORIZED =>
+        // XHR requests don't receive a TEMP_REDIRECT but a UNAUTHORIZED. The client can handle this
+        // to trigger the proper redirect anyway, but for a correct flow the session cookie must be set
+        context.addResponseSessionCookie()
         HttpResponse(Unauthorized)
       case HttpConstants.BAD_REQUEST =>
         HttpResponse(BadRequest)
