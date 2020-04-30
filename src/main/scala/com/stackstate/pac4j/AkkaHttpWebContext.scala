@@ -97,7 +97,7 @@ case class AkkaHttpWebContext(request: HttpRequest,
   }
 
   override def getRequestParameters: java.util.Map[String, Array[String]] = {
-    requestParameters.mapValues(Array(_)).asJava
+    requestParameters.map { case (key, value) => key -> Array(value) }.asJava
   }
 
   override def getFullRequestURL: String = {

@@ -17,13 +17,14 @@ import org.pac4j.core.credentials.UsernamePasswordCredentials
 import org.pac4j.core.engine.{DefaultCallbackLogic, DefaultLogoutLogic, DefaultSecurityLogic, SecurityGrantedAccessAdapter}
 import org.pac4j.core.http.adapter.HttpActionAdapter
 import org.pac4j.core.profile.CommonProfile
-import org.scalatest.{Matchers, WordSpecLike}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpecLike
 
 import scala.collection.JavaConverters._
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-class AkkaHttpSecurityTest extends WordSpecLike with Matchers with ScalatestRouteTest {
+class AkkaHttpSecurityTest extends AnyWordSpecLike with Matchers with ScalatestRouteTest {
 
   "AkkaHttpSecurity" should {
     "set the proper defaults" in {
