@@ -21,7 +21,7 @@ import akka.stream.Materializer
 import com.stackstate.pac4j.store.SessionStorage
 import org.pac4j.core.context.Pac4jConstants
 
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.collection.immutable
 

@@ -1,39 +1,36 @@
-import Dependencies._
-
 lazy val root = (project in file(".")).
   settings(
     inThisBuild(List(
       organization := "io.kensu-oss",
-      scalaVersion := "2.11.12",
-      version      := "0.6.1",
-      artifactClassifier := Some(s"akka-http-$akkaHttpBaseVersion")
+      scalaVersion := "2.13.2",
+      version      := "1.0.0"
     )),
     name := "akka-http-pac4j",
     libraryDependencies ++= Dependencies.dependencies,
 
-      scalacOptions ++= Seq(
-  "-deprecation",           
-  "-encoding", "UTF-8",
-  "-feature",                
-  "-language:existentials",
-  "-language:higherKinds",
-  "-language:implicitConversions",
-  "-language:postfixOps",
-  "-unchecked",
-  // "-Xfatal-warnings", // TODO: Should be reenabled when implementation is complete
-  "-Xlint",
-  "-Yno-adapted-args",
-  "-Xfuture",
-      ),
+    scalacOptions ++= Seq(
+      "-encoding", "UTF-8",
+      "-unchecked",
+      //"-deprecation",
+      "-feature",
+      "-language:existentials",
+      "-language:higherKinds",
+      "-language:implicitConversions",
+      "-language:postfixOps",
+      //"-Wdead-code",
+      //"-Werror",
+      //"-Wself-implicit", //false positives with 2.13.1
+      //"-Wunused",
+      "-Wnumeric-widen",
+      "-Xlint"
+    ),
     scalacOptions in (Compile, console) --= Seq(
-      "-Ywarn-unused-import",
-      "-Xfatal-warnings"
+      "-Wunused:imports",
+      "-Werror"
     )
   )
 
 publishArtifact in (Compile, packageSrc) := true
-
-crossScalaVersions := Seq("2.12.4", scalaVersion.value)
 
 pgpReadOnly := false
 

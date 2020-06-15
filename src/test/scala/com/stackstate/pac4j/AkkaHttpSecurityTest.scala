@@ -4,15 +4,8 @@ import java.{lang, util}
 
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.server.Directives._
-import akka.http.scaladsl.server.{AuthorizationFailedRejection, RequestContext, Route, RouteResult}
-import akka.http.scaladsl.model._
-import com.stackstate.pac4j.AkkaHttpSecurity.{AkkaHttpCallbackLogic, AkkaHttpLogoutLogic, AkkaHttpSecurityLogic}
-import org.pac4j.core.config.Config
-import org.pac4j.core.http.adapter.HttpActionAdapter
-import org.pac4j.core.context.{Cookie, Pac4jConstants, WebContext}
-import org.scalatest.{Matchers, WordSpecLike}
-import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.RouteResult.Complete
+import akka.http.scaladsl.server.{AuthorizationFailedRejection, Route, RouteResult}
 import akka.http.scaladsl.testkit.ScalatestRouteTest
 import com.stackstate.pac4j.AkkaHttpSecurity.{AkkaHttpCallbackLogic, AkkaHttpLogoutLogic, AkkaHttpSecurityLogic}
 import com.stackstate.pac4j.http.AkkaHttpActionAdapter
@@ -25,13 +18,14 @@ import org.pac4j.core.credentials.UsernamePasswordCredentials
 import org.pac4j.core.engine.{DefaultCallbackLogic, DefaultLogoutLogic, DefaultSecurityLogic, SecurityGrantedAccessAdapter}
 import org.pac4j.core.http.adapter.HttpActionAdapter
 import org.pac4j.core.profile.CommonProfile
-import org.scalatest.{Matchers, WordSpecLike}
+import org.scalatest.wordspec.AnyWordSpecLike
+import org.scalatest.matchers.should.Matchers
 
-import scala.collection.JavaConverters._
 import scala.concurrent.Future
 import scala.concurrent.duration._
+import scala.jdk.CollectionConverters._
 
-class AkkaHttpSecurityTest extends WordSpecLike with Matchers with ScalatestRouteTest {
+class AkkaHttpSecurityTest extends AnyWordSpecLike with Matchers with ScalatestRouteTest {
 
   "AkkaHttpSecurity" should {
     "set the proper defaults" in {

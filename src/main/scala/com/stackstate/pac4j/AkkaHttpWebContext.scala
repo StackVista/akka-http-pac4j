@@ -10,7 +10,7 @@ import com.stackstate.pac4j.http.AkkaHttpSessionStore
 import com.stackstate.pac4j.store.SessionStorage
 import org.pac4j.core.context.{Cookie, WebContext}
 
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 /**
   *
@@ -66,7 +66,7 @@ case class AkkaHttpWebContext(request: HttpRequest,
       name = cookie.getName,
       value = cookie.getValue,
       expires = None,
-      maxAge = if (cookie.getMaxAge < 0) None else Some(cookie.getMaxAge),
+      maxAge = if (cookie.getMaxAge < 0) None else Some(cookie.getMaxAge.toLong),
       domain = Option(cookie.getDomain),
       path = Option(cookie.getPath),
       secure = cookie.isSecure,
@@ -95,7 +95,7 @@ case class AkkaHttpWebContext(request: HttpRequest,
   }
 
   override def getRequestParameters: java.util.Map[String, Array[String]] = {
-    requestParameters.mapValues(Array(_)).asJava
+    requestParameters.view.mapValues(Array(_)).toMap.asJava
   }
 
   override def getFullRequestURL: String = {

@@ -5,12 +5,13 @@ import akka.http.scaladsl.model.headers.{Cookie, HttpCookie}
 import akka.http.scaladsl.model._
 import com.stackstate.pac4j.store.SessionStorage._
 import com.stackstate.pac4j.store.{ForgetfulSessionStorage, SessionStorage}
-import org.scalatest.{Matchers, WordSpecLike}
+import org.scalatest.wordspec.AnyWordSpecLike
+import org.scalatest.matchers.should.Matchers
 
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 import scala.concurrent.duration._
 
-class AkkaHttpWebContextTest extends WordSpecLike with Matchers {
+class AkkaHttpWebContextTest extends AnyWordSpecLike with Matchers {
   lazy val cookie = ("cookieName", "cookieValue")
 
   "AkkaHttpWebContext" should {
