@@ -1,6 +1,6 @@
 package com.stackstate.pac4j.http
 
-import akka.http.scaladsl.model.{HttpEntity, HttpHeader, HttpResponse, Uri}
+import akka.http.scaladsl.model.{HttpEntity, HttpHeader, HttpResponse, StatusCodes, Uri}
 import org.pac4j.core.context.HttpConstants
 import org.pac4j.core.http.adapter.HttpActionAdapter
 import akka.http.scaladsl.model.StatusCodes._
@@ -15,6 +15,7 @@ import org.pac4j.core.exception.http.{
   HttpAction,
   NoContentAction,
   OkAction,
+  SeeOtherAction,
   TemporaryRedirectAction,
   UnauthorizedAction
 }
@@ -38,7 +39,9 @@ object AkkaHttpActionAdapter extends HttpActionAdapter[Future[RouteResult], Akka
       case a: FoundAction =>
         context.addResponseSessionCookie()
         HttpResponse(SeeOther, headers = List[HttpHeader](Location(Uri(a.getLocation))))
-
+      case a: SeeOtherAction =>
+        context.addResponseSessionCookie()
+        HttpResponse(SeeOther, headers = List[HttpHeader](Location(Uri(a.getLocation))))
       case a: OkAction =>
         val contentBytes = a.getContent.getBytes
         val entity = context.getContentType.map(ct => HttpEntity(ct, contentBytes)).getOrElse(HttpEntity(contentBytes))
@@ -47,6 +50,8 @@ object AkkaHttpActionAdapter extends HttpActionAdapter[Future[RouteResult], Akka
         HttpResponse(NoContent)
       case _ if action.getCode == 500 =>
         HttpResponse(InternalServerError)
+      case _ =>
+        HttpResponse(StatusCodes.getForKey(action.getCode).getOrElse(CustomStatusCode(action.getCode)))
     }))
   }
 }
