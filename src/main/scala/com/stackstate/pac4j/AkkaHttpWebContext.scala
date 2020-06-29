@@ -1,6 +1,6 @@
 package com.stackstate.pac4j
 
-import java.util.UUID
+import java.util.{Optional, UUID}
 
 import akka.http.scaladsl.model.HttpHeader.ParsingResult.{Error, Ok}
 import akka.http.scaladsl.model.headers.HttpCookie
@@ -10,6 +10,7 @@ import com.stackstate.pac4j.http.AkkaHttpSessionStore
 import com.stackstate.pac4j.store.SessionStorage
 import org.pac4j.core.context.{Cookie, WebContext}
 
+import compat.java8.OptionConverters._
 import scala.collection.JavaConverters._
 
 /**
@@ -117,22 +118,16 @@ case class AkkaHttpWebContext(request: HttpRequest,
     }
   }
 
-  override def writeResponseContent(content: String): Unit = {
-    Option(content).foreach(cont => changes = changes.copy(content = changes.content + cont))
-  }
-
   override def getPath: String = {
     request.getUri().path
   }
 
-  override def setResponseStatus(code: Int): Unit = ()
-
-  override def getRequestParameter(name: String): String = {
-    requestParameters.getOrElse(name, null)
+  override def getRequestParameter(name: String): Optional[String] = {
+    requestParameters.get(name).asJava
   }
 
-  override def getRequestHeader(name: String): String = {
-    request.headers.find(_.name().toLowerCase() == name.toLowerCase).map(_.value).orNull
+  override def getRequestHeader(name: String): Optional[String] = {
+    request.headers.find(_.name().toLowerCase() == name.toLowerCase).map(_.value).asJava
   }
 
   override def getScheme: String = {
@@ -157,12 +152,8 @@ case class AkkaHttpWebContext(request: HttpRequest,
     changes = changes.copy(attributes = changes.attributes ++ Map[String, AnyRef](name -> value))
   }
 
-  override def getRequestAttribute(name: String): AnyRef = {
-    changes.attributes.getOrElse(name, null)
-  }
-
-  def getResponseContent: String = {
-    changes.content
+  override def getRequestAttribute(name: String): Optional[AnyRef] = {
+    changes.attributes.get(name).asJava
   }
 
   def getContentType: Option[ContentType] = {

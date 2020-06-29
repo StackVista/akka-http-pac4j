@@ -1,5 +1,7 @@
 package com.stackstate.pac4j
 
+import java.util.Optional
+
 import akka.http.scaladsl.model.HttpHeader.ParsingResult.Ok
 import akka.http.scaladsl.model.headers.{Cookie, HttpCookie}
 import akka.http.scaladsl.model._
@@ -21,11 +23,11 @@ class AkkaHttpWebContextTest extends WordSpecLike with Matchers {
     }
 
     "get a request header or an empty string when no such header exists" in withContext(requestHeaders = List(("foo", "bar"))) { webContext =>
-      webContext.getRequestHeader("foo") shouldEqual "bar"
-      webContext.getRequestHeader("abc") shouldEqual null
+      webContext.getRequestHeader("foo") shouldEqual Optional.of("bar")
+      webContext.getRequestHeader("abc") shouldEqual Optional.empty()
     }
     "make sure request headers are case insensitive" in withContext(requestHeaders = List(("foo", "bar"))) { webContext =>
-      webContext.getRequestHeader("FOO") shouldEqual "bar"
+      webContext.getRequestHeader("FOO") shouldEqual Optional.of("bar")
     }
 
     "get the full url including port from a request" in withContext(url = "/views/#/something.html", hostAddress = "localhost", hostPort = 7070) {
@@ -64,14 +66,14 @@ class AkkaHttpWebContextTest extends WordSpecLike with Matchers {
 
     "get the request parameters or an empty string when no such parameter exists" in withContext(url = "www.stackstate.com/views?v=1234") {
       webContext =>
-        webContext.getRequestParameter("v") shouldEqual "1234"
-        webContext.getRequestParameter("p") shouldEqual null
+        webContext.getRequestParameter("v") shouldEqual Optional.of("1234")
+        webContext.getRequestParameter("p") shouldEqual Optional.empty()
     }
 
     "get/set request attributes" in withContext() { webContext =>
       webContext.setRequestAttribute("foo", "bar")
-      webContext.getRequestAttribute("foo") shouldEqual "bar"
-      webContext.getRequestAttribute("foozor") shouldEqual null
+      webContext.getRequestAttribute("foo") shouldEqual Optional.of("bar")
+      webContext.getRequestAttribute("foozor") shouldEqual Optional.empty()
     }
 
     "set response header" in withContext() { webContext =>
@@ -85,12 +87,6 @@ class AkkaHttpWebContextTest extends WordSpecLike with Matchers {
       webContext.getChanges.headers shouldBe List(Location("/bar"))
     }
 
-    "get/set response content" in withContext() { webContext =>
-      webContext.getResponseContent shouldEqual ""
-      webContext.writeResponseContent("content")
-      webContext.getResponseContent shouldEqual "content"
-    }
-
     "get/set content type" in withContext() { webContext =>
       webContext.setResponseContentType("application/json")
       webContext.getContentType shouldEqual Some(ContentTypes.`application/json`)
@@ -102,7 +98,7 @@ class AkkaHttpWebContextTest extends WordSpecLike with Matchers {
 
     "return form fields in the request parameters" in withContext(formFields = Seq(("username", "testuser"))) { webContext =>
       webContext.getRequestParameters.containsKey("username") shouldEqual true
-      webContext.getRequestParameter("username") shouldEqual "testuser"
+      webContext.getRequestParameter("username") shouldEqual Optional.of("testuser")
     }
 
     "add a cookie when the session is persisted and put in the expected data" in withContext(sessionStorage = new ForgetfulSessionStorage {
