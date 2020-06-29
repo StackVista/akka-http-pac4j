@@ -51,7 +51,7 @@ object AkkaHttpActionAdapter extends HttpActionAdapter[Future[RouteResult], Akka
       case _ if action.getCode == 500 =>
         HttpResponse(InternalServerError)
       case _ =>
-        HttpResponse(StatusCodes.getForKey(action.getCode).getOrElse(CustomStatusCode(action.getCode)))
+        HttpResponse(StatusCodes.getForKey(action.getCode).getOrElse(custom(action.getCode, "")))
     }))
   }
 }
