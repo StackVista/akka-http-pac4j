@@ -3,9 +3,10 @@ package com.stackstate.pac4j.authorizer
 import java.util.UUID
 
 import com.stackstate.pac4j.AkkaHttpWebContext
-import org.pac4j.core.context.{Cookie, Pac4jConstants}
+import org.pac4j.core.context.Cookie
 
 import scala.concurrent.duration.FiniteDuration
+import org.pac4j.core.util.Pac4jConstants
 
 object CsrfCookieAuthorizer {
 

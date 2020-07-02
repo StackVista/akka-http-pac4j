@@ -1,10 +1,10 @@
 import sbt._
 
 object DependencyConfig {
-  val scalacheckVersion: String = "1.14.1"
+  val scalacheckVersion: String = "1.14.3"
   val akkaHttpVersion: String = "10.1.12"
   val akkaStreamsVersion: String = "2.5.31"
-  val pac4jVersion: String = "3.6.1"
+  val pac4jVersion: String = "4.0.3"
   val scalaTestVersion: String = "3.1.2"
 }
 
