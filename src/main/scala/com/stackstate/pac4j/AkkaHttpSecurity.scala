@@ -172,7 +172,7 @@ class AkkaHttpSecurity(config: Config, sessionStorage: SessionStorage, val sessi
              destroySession: Boolean = true,
              centralLogout: Boolean = false
             ): Route = {
-    withContext() { akkaWebContext => ctx =>
+    withContext() { akkaWebContext => _ =>
       logoutLogic.perform(akkaWebContext, config, actionAdapter, defaultUrl, logoutPatternUrl, localLogout, destroySession, centralLogout)
     }
   }

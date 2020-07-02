@@ -11,13 +11,13 @@ lazy val root = (project in file(".")).
     scalacOptions ++= Seq(
       "-encoding", "UTF-8",
       "-unchecked",
-      //"-deprecation",
+      "-deprecation",
       "-feature",
       "-language:existentials",
       "-language:higherKinds",
       "-language:implicitConversions",
       "-language:postfixOps",
-      //"-Wdead-code",
+      "-Wdead-code",
       //"-Werror",
       //"-Wself-implicit", //false positives with 2.13.1
       //"-Wunused",
@@ -31,8 +31,6 @@ lazy val root = (project in file(".")).
   )
 
 publishArtifact in (Compile, packageSrc) := true
-
-//pgpReadOnly := false
 
 publishMavenStyle := true
 

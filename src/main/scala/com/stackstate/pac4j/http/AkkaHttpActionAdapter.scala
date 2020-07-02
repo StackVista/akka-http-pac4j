@@ -16,7 +16,6 @@ import org.pac4j.core.exception.http.{
   NoContentAction,
   OkAction,
   SeeOtherAction,
-  TemporaryRedirectAction,
   UnauthorizedAction
 }
 

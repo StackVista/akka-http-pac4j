@@ -5,7 +5,7 @@ import java.{lang, util}
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.RouteResult.Complete
-import akka.http.scaladsl.server.{AuthorizationFailedRejection, Route, RouteResult}
+import akka.http.scaladsl.server.{AuthorizationFailedRejection, RouteResult}
 import akka.http.scaladsl.testkit.ScalatestRouteTest
 import com.stackstate.pac4j.AkkaHttpSecurity.{AkkaHttpCallbackLogic, AkkaHttpLogoutLogic, AkkaHttpSecurityLogic}
 import com.stackstate.pac4j.http.AkkaHttpActionAdapter
