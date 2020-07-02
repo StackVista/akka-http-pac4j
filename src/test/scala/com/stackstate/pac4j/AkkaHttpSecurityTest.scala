@@ -10,7 +10,6 @@ import akka.http.scaladsl.testkit.ScalatestRouteTest
 import com.stackstate.pac4j.AkkaHttpSecurity.{AkkaHttpCallbackLogic, AkkaHttpLogoutLogic, AkkaHttpSecurityLogic}
 import com.stackstate.pac4j.http.AkkaHttpActionAdapter
 import com.stackstate.pac4j.store.{ForgetfulSessionStorage, InMemorySessionStorage}
-import org.pac4j.core.authorization.authorizer.Authorizer
 import org.pac4j.core.client.{Clients, IndirectClient}
 import org.pac4j.core.config.Config
 import org.pac4j.core.context.{Cookie, WebContext}
@@ -269,15 +268,12 @@ class AkkaHttpSecurityTest extends AnyWordSpecLike with Matchers with ScalatestR
       val profile = new CommonProfile()
       val context = AkkaHttpWebContext(HttpRequest(), Seq.empty, new ForgetfulSessionStorage, AkkaHttpWebContext.DEFAULT_COOKIE_NAME)
 
-      val authorizer = new Authorizer[CommonProfile] {
-        override def isAuthorized(context: WebContext, profiles: util.List[UserProfile]): Boolean = {
+      val route =
+        AkkaHttpSecurity.authorize((context: WebContext, profiles: util.List[UserProfile]) => {
           profiles.size() shouldBe 1
           profiles.get(0) shouldBe profile
           false
-        }
-      }
-      val route: Route =
-        AkkaHttpSecurity.authorize(authorizer)(AuthenticatedRequest(context, List(profile))) {
+        })(AuthenticatedRequest(context, List(profile))) {
           complete("oops!")
         }
 
@@ -287,9 +283,6 @@ class AkkaHttpSecurityTest extends AnyWordSpecLike with Matchers with ScalatestR
     "reject when authorization fails" in {
       val context = AkkaHttpWebContext(HttpRequest(), Seq.empty, new ForgetfulSessionStorage, AkkaHttpWebContext.DEFAULT_COOKIE_NAME)
 
-      val authorizer = new Authorizer[CommonProfile] {
-        override def isAuthorized(context: WebContext, profiles: util.List[CommonProfile]): Boolean = false
-      }
       val route =
         AkkaHttpSecurity.authorize((context: WebContext, profiles: util.List[UserProfile]) => {
           false
@@ -303,9 +296,6 @@ class AkkaHttpSecurityTest extends AnyWordSpecLike with Matchers with ScalatestR
     "succeed when authorization succeeded" in {
       val context = AkkaHttpWebContext(HttpRequest(), Seq.empty, new ForgetfulSessionStorage, AkkaHttpWebContext.DEFAULT_COOKIE_NAME)
 
-      val authorizer = new Authorizer[CommonProfile] {
-        override def isAuthorized(context: WebContext, profiles: util.List[CommonProfile]): Boolean = true
-      }
       val route =
         AkkaHttpSecurity.authorize((context: WebContext, profiles: util.List[UserProfile]) => {
           true

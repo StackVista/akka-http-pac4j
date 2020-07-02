@@ -2,8 +2,8 @@ lazy val root = (project in file(".")).
   settings(
     inThisBuild(List(
       organization := "io.kensu-oss",
-      scalaVersion := "2.13.2",
-      version      := "1.1.0-SNAPSHOT"
+      scalaVersion := "2.13.3",
+      version      := "2.0.0-SNAPSHOT"
     )),
     name := "akka-http-pac4j",
     libraryDependencies ++= Dependencies.dependencies,
@@ -32,7 +32,7 @@ lazy val root = (project in file(".")).
 
 publishArtifact in (Compile, packageSrc) := true
 
-pgpReadOnly := false
+//pgpReadOnly := false
 
 publishMavenStyle := true
 
