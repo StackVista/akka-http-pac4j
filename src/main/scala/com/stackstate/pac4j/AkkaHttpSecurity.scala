@@ -25,6 +25,8 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.collection.immutable
 import org.pac4j.core.util.Pac4jConstants
 
+import scala.annotation.unused
+
 object AkkaHttpSecurity {
   type AkkaHttpSecurityLogic = SecurityLogic[Future[RouteResult], AkkaHttpWebContext]
   type AkkaHttpCallbackLogic = CallbackLogic[Future[RouteResult], AkkaHttpWebContext]
@@ -135,13 +137,15 @@ class AkkaHttpSecurity(config: Config, sessionStorage: SessionStorage, val sessi
         // TODO Fix this properly
         Future.successful(()).flatMap { _ =>
           val securityGrantedAccessAdapter = new SecurityGrantedAccessAdapter[Future[RouteResult], AkkaHttpWebContext] {
-            override def adapt(context: AkkaHttpWebContext, profiles: util.Collection[UserProfile], parameters: AnyRef*): Future[RouteResult] = {
+            override def adapt(context: AkkaHttpWebContext,
+                               profiles: util.Collection[UserProfile],
+                               @unused parameters: AnyRef*): Future[RouteResult] = {
               val authenticatedRequest = AuthenticatedRequest(context, profiles.asScala.toList)
               inner(Tuple1(authenticatedRequest))(ctx)
             }
           }
           securityLogic.perform(akkaWebContext, config, securityGrantedAccessAdapter, actionAdapter, clients, authorizers, "", multiProfile)
-        }
+      }
       }
     }
 
@@ -170,8 +174,7 @@ class AkkaHttpSecurity(config: Config, sessionStorage: SessionStorage, val sessi
              logoutPatternUrl: String = Pac4jConstants.DEFAULT_LOGOUT_URL_PATTERN_VALUE,
              localLogout: Boolean = true,
              destroySession: Boolean = true,
-             centralLogout: Boolean = false
-            ): Route = {
+             centralLogout: Boolean = false): Route = {
     withContext() { akkaWebContext => _ =>
       logoutLogic.perform(akkaWebContext, config, actionAdapter, defaultUrl, logoutPatternUrl, localLogout, destroySession, centralLogout)
     }

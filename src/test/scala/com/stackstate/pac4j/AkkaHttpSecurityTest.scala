@@ -24,6 +24,8 @@ import org.scalatest.matchers.should.Matchers
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import org.pac4j.core.util.Pac4jConstants
+
+import scala.annotation.unused
 import scala.jdk.CollectionConverters._
 
 class AkkaHttpSecurityTest extends AnyWordSpecLike with Matchers with ScalatestRouteTest {
@@ -49,15 +51,15 @@ class AkkaHttpSecurityTest extends AnyWordSpecLike with Matchers with ScalatestR
 
       config.setHttpActionAdapter(actionAdapter)
       config.setSecurityLogic(new AkkaHttpSecurityLogic {
-        override def perform(context: AkkaHttpWebContext,
-                             config: Config,
-                             securityGrantedAccessAdapter: SecurityGrantedAccessAdapter[Future[RouteResult], AkkaHttpWebContext],
-                             httpActionAdapter: HttpActionAdapter[Future[RouteResult], AkkaHttpWebContext],
-                             clients: String,
-                             authorizers: String,
-                             matchers: String,
-                             multiProfile: lang.Boolean,
-                             parameters: AnyRef*): Future[RouteResult] = {
+        @unused override def perform(@unused context: AkkaHttpWebContext,
+                                     @unused config: Config,
+                                     @unused securityGrantedAccessAdapter: SecurityGrantedAccessAdapter[Future[RouteResult], AkkaHttpWebContext],
+                                     httpActionAdapter: HttpActionAdapter[Future[RouteResult], AkkaHttpWebContext],
+                                     clients: String,
+                                     authorizers: String,
+                                     matchers: String,
+                                     multiProfile: lang.Boolean,
+                                     @unused parameters: AnyRef*): Future[RouteResult] = {
           clients shouldBe "myclients"
           matchers shouldBe "" // Empty string means always matching hit in RequireAllMatchersChecker.java
           authorizers shouldBe "myauthorizers" // Empty string means always authorize in DefaultAuthorizationCheck.java
@@ -83,15 +85,15 @@ class AkkaHttpSecurityTest extends AnyWordSpecLike with Matchers with ScalatestR
       val profile = new CommonProfile()
 
       config.setSecurityLogic(new AkkaHttpSecurityLogic {
-        override def perform(context: AkkaHttpWebContext,
-                             config: Config,
-                             securityGrantedAccessAdapter: SecurityGrantedAccessAdapter[Future[RouteResult], AkkaHttpWebContext],
-                             httpActionAdapter: HttpActionAdapter[Future[RouteResult], AkkaHttpWebContext],
-                             clients: String,
-                             authorizers: String,
-                             matchers: String,
-                             multiProfile: lang.Boolean,
-                             parameters: AnyRef*): Future[RouteResult] = {
+        @unused override def perform(context: AkkaHttpWebContext,
+                                     @unused config: Config,
+                                     securityGrantedAccessAdapter: SecurityGrantedAccessAdapter[Future[RouteResult], AkkaHttpWebContext],
+                                     @unused httpActionAdapter: HttpActionAdapter[Future[RouteResult], AkkaHttpWebContext],
+                                     @unused clients: String,
+                                     @unused authorizers: String,
+                                     @unused matchers: String,
+                                     @unused multiProfile: lang.Boolean,
+                                     @unused parameters: AnyRef*): Future[RouteResult] = {
           securityGrantedAccessAdapter.adapt(context, List[UserProfile](profile).asJava)
         }
       })
@@ -269,7 +271,7 @@ class AkkaHttpSecurityTest extends AnyWordSpecLike with Matchers with ScalatestR
       val context = AkkaHttpWebContext(HttpRequest(), Seq.empty, new ForgetfulSessionStorage, AkkaHttpWebContext.DEFAULT_COOKIE_NAME)
 
       val route =
-        AkkaHttpSecurity.authorize((context: WebContext, profiles: util.List[UserProfile]) => {
+        AkkaHttpSecurity.authorize((_: WebContext, profiles: util.List[UserProfile]) => {
           profiles.size() shouldBe 1
           profiles.get(0) shouldBe profile
           false
@@ -284,7 +286,7 @@ class AkkaHttpSecurityTest extends AnyWordSpecLike with Matchers with ScalatestR
       val context = AkkaHttpWebContext(HttpRequest(), Seq.empty, new ForgetfulSessionStorage, AkkaHttpWebContext.DEFAULT_COOKIE_NAME)
 
       val route =
-        AkkaHttpSecurity.authorize((context: WebContext, profiles: util.List[UserProfile]) => {
+        AkkaHttpSecurity.authorize((_: WebContext, _: util.List[UserProfile]) => {
           false
         })(AuthenticatedRequest(context, List.empty)) {
           complete("oops!")
@@ -297,7 +299,7 @@ class AkkaHttpSecurityTest extends AnyWordSpecLike with Matchers with ScalatestR
       val context = AkkaHttpWebContext(HttpRequest(), Seq.empty, new ForgetfulSessionStorage, AkkaHttpWebContext.DEFAULT_COOKIE_NAME)
 
       val route =
-        AkkaHttpSecurity.authorize((context: WebContext, profiles: util.List[UserProfile]) => {
+        AkkaHttpSecurity.authorize((_: WebContext, _: util.List[UserProfile]) => {
           true
         })(AuthenticatedRequest(context, List.empty)) {
           complete("cool!")
