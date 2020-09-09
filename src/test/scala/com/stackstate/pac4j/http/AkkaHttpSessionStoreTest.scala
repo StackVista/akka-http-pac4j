@@ -1,5 +1,7 @@
 package com.stackstate.pac4j.http
 
+import java.util.Optional
+
 import akka.http.scaladsl.model.HttpRequest
 import akka.http.scaladsl.testkit.ScalatestRouteTest
 import com.stackstate.pac4j.AkkaHttpWebContext
@@ -14,13 +16,13 @@ class AkkaHttpSessionStoreTest extends AnyWordSpecLike with Matchers with Scalat
       new AkkaHttpSessionStore().get(
         new AkkaHttpWebContext(HttpRequest(), Seq.empty, new ForgetfulSessionStorage, AkkaHttpWebContext.DEFAULT_COOKIE_NAME),
         "mykey"
-      ) shouldBe null
+      ) shouldBe Optional.empty()
     }
 
     "return the data when available" in {
       val context = new AkkaHttpWebContext(HttpRequest(), Seq.empty, new InMemorySessionStorage(30.minutes), AkkaHttpWebContext.DEFAULT_COOKIE_NAME)
       new AkkaHttpSessionStore().set(context, "mykey", "yooo")
-      new AkkaHttpSessionStore().get(context, "mykey") shouldBe "yooo"
+      new AkkaHttpSessionStore().get(context, "mykey") shouldBe Optional.of("yooo")
     }
   }
 }

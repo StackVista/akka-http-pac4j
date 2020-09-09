@@ -2,7 +2,7 @@ package com.stackstate.pac4j.store
 
 import com.stackstate.pac4j.store.SessionStorage._
 
-import scala.collection.SortedSet
+import scala.collection.immutable.SortedSet
 import scala.concurrent.duration.FiniteDuration
 
 object InMemorySessionStorage {

@@ -31,7 +31,13 @@ log/
 **/idea_build
 out/
 
+# Metals
+**/metals.sbt
+**/.metals
+
 # Sublime
 *.sublime*
 *.sublime-project
 *.sublime-workspace
+
+bin/
