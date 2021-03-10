@@ -67,7 +67,7 @@ case class AkkaHttpWebContext(request: HttpRequest,
       name = cookie.getName,
       value = cookie.getValue,
       expires = None,
-      maxAge = if (cookie.getMaxAge < 0) None else Some(cookie.getMaxAge),
+      maxAge = if (cookie.getMaxAge < 0) None else Some(cookie.getMaxAge.toLong),
       domain = Option(cookie.getDomain),
       path = Option(cookie.getPath),
       secure = cookie.isSecure,
@@ -97,9 +97,9 @@ case class AkkaHttpWebContext(request: HttpRequest,
     changes = changes.copy(headers = header :: changes.headers.filter(_.name != name))
   }
 
-  override def getRequestParameters: java.util.Map[String, Array[String]] = {
-    requestParameters.mapValues(Array(_)).asJava
-  }
+  @com.github.ghik.silencer.silent("mapValues")
+  override def getRequestParameters: java.util.Map[String, Array[String]] =
+    requestParameters.mapValues(Array(_)).toMap.asJava
 
   override def getFullRequestURL: String = {
     request.getUri().toString
@@ -171,7 +171,10 @@ case class AkkaHttpWebContext(request: HttpRequest,
     addResponseCookie(cookie)
   }
 
-  def addResponseCsrfCookie(): Unit = CsrfCookieAuthorizer(this, Some(sessionStorage.sessionLifetime))
+  def addResponseCsrfCookie(): Unit = {
+    CsrfCookieAuthorizer(this, Some(sessionStorage.sessionLifetime))
+    ()
+  }
 }
 
 object AkkaHttpWebContext {

@@ -2,11 +2,13 @@ language: scala
 dist: trusty # If unspecified uses Xenial images, which no longer support oraclejdk8
 sudo: false
 
+jdk: openjdk8
+
 matrix:
   include:
-    - jdk: oraclejdk8
-    - scala: 2.12.4
+    - scala: 2.12.13
+    - scala: 2.13.5
 
   script:
-    - sbt test
+    - sbt scapegoat test
 

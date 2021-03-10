@@ -2,6 +2,8 @@ package com.stackstate.pac4j
 
 import java.{lang, util}
 
+import com.github.ghik.silencer.silent
+
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.{AuthorizationFailedRejection, RouteResult}
@@ -18,14 +20,16 @@ import org.pac4j.core.engine.{DefaultCallbackLogic, DefaultLogoutLogic, DefaultS
 import org.pac4j.core.exception.http.HttpAction
 import org.pac4j.core.http.adapter.HttpActionAdapter
 import org.pac4j.core.profile.{CommonProfile, UserProfile}
-import org.scalatest.{Matchers, WordSpecLike}
+
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpecLike
 
 import scala.collection.JavaConverters._
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import org.pac4j.core.util.Pac4jConstants
 
-class AkkaHttpSecurityTest extends WordSpecLike with Matchers with ScalatestRouteTest {
+class AkkaHttpSecurityTest extends AnyWordSpecLike with Matchers with ScalatestRouteTest {
 
   "AkkaHttpSecurity" should {
     "set the proper defaults" in {
@@ -48,6 +52,7 @@ class AkkaHttpSecurityTest extends WordSpecLike with Matchers with ScalatestRout
 
       config.setHttpActionAdapter(actionAdapter)
       config.setSecurityLogic(new AkkaHttpSecurityLogic {
+        @silent("never\\ used")
         override def perform(context: AkkaHttpWebContext,
                              config: Config,
                              securityGrantedAccessAdapter: SecurityGrantedAccessAdapter[Future[RouteResult], AkkaHttpWebContext],
@@ -82,6 +87,7 @@ class AkkaHttpSecurityTest extends WordSpecLike with Matchers with ScalatestRout
       val profile = new CommonProfile()
 
       config.setSecurityLogic(new AkkaHttpSecurityLogic {
+        @silent("never\\ used")
         override def perform(context: AkkaHttpWebContext,
                              config: Config,
                              securityGrantedAccessAdapter: SecurityGrantedAccessAdapter[Future[RouteResult], AkkaHttpWebContext],
@@ -268,7 +274,7 @@ class AkkaHttpSecurityTest extends WordSpecLike with Matchers with ScalatestRout
       val context = AkkaHttpWebContext(HttpRequest(), Seq.empty, new ForgetfulSessionStorage, AkkaHttpWebContext.DEFAULT_COOKIE_NAME)
 
       val route =
-        AkkaHttpSecurity.authorize((context: WebContext, profiles: util.List[UserProfile]) => {
+        AkkaHttpSecurity.authorize((_: WebContext, profiles: util.List[UserProfile]) => {
           profiles.size() shouldBe 1
           profiles.get(0) shouldBe profile
           false
@@ -283,7 +289,7 @@ class AkkaHttpSecurityTest extends WordSpecLike with Matchers with ScalatestRout
       val context = AkkaHttpWebContext(HttpRequest(), Seq.empty, new ForgetfulSessionStorage, AkkaHttpWebContext.DEFAULT_COOKIE_NAME)
 
       val route =
-        AkkaHttpSecurity.authorize((context: WebContext, profiles: util.List[UserProfile]) => {
+        AkkaHttpSecurity.authorize((_: WebContext, _: util.List[UserProfile]) => {
           false
         })(AuthenticatedRequest(context, List.empty)) {
           complete("oops!")
@@ -296,7 +302,7 @@ class AkkaHttpSecurityTest extends WordSpecLike with Matchers with ScalatestRout
       val context = AkkaHttpWebContext(HttpRequest(), Seq.empty, new ForgetfulSessionStorage, AkkaHttpWebContext.DEFAULT_COOKIE_NAME)
 
       val route =
-        AkkaHttpSecurity.authorize((context: WebContext, profiles: util.List[UserProfile]) => {
+        AkkaHttpSecurity.authorize((_: WebContext, _: util.List[UserProfile]) => {
           true
         })(AuthenticatedRequest(context, List.empty)) {
           complete("cool!")
