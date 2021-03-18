@@ -156,7 +156,7 @@ class AkkaHttpSecurityTest extends AnyWordSpecLike with Matchers with ScalatestR
       } ~> check {
         status shouldEqual StatusCodes.OK
         responseAs[String] shouldBe "called!"
-        headers.size shouldBe 1
+        headers.size shouldBe 2
         header("Set-Cookie").get.value() shouldBe "MyCookie=MyValue; Max-Age=100; Path=/; Secure; HttpOnly"
       }
     }

@@ -5,24 +5,27 @@ import java.util.{Optional, UUID}
 import akka.http.scaladsl.model.HttpHeader.ParsingResult.{Error, Ok}
 import akka.http.scaladsl.model.headers.HttpCookie
 import akka.http.scaladsl.model.{ContentType, HttpHeader, HttpRequest}
+
 import com.stackstate.pac4j.authorizer.CsrfCookieAuthorizer
 import com.stackstate.pac4j.http.AkkaHttpSessionStore
 import com.stackstate.pac4j.store.SessionStorage
+
 import org.pac4j.core.context.{Cookie, WebContext}
 
 import compat.java8.OptionConverters._
 import scala.collection.JavaConverters._
 
 /**
-  *
-  * The AkkaHttpWebContext is responsible for wrapping an HTTP request and stores changes that are produced by pac4j and
-  * need to be applied to an HTTP response.
-  */
-case class AkkaHttpWebContext(request: HttpRequest,
-                              formFields: Seq[(String, String)],
-                              private[pac4j] val sessionStorage: SessionStorage,
-                              sessionCookieName: String)
-    extends WebContext {
+ * The AkkaHttpWebContext is responsible for wrapping an HTTP request 
+ * and stores changes that are produced by pac4j 
+ * and need to be applied to an HTTP response.
+ */
+final class AkkaHttpWebContext(
+  val request: HttpRequest,
+  val formFields: Seq[(String, String)],
+  private[pac4j] val sessionStorage: SessionStorage,
+  val sessionCookieName: String
+) extends WebContext {
   import com.stackstate.pac4j.AkkaHttpWebContext._
 
   private var changes = ResponseChanges.empty
@@ -33,7 +36,8 @@ case class AkkaHttpWebContext(request: HttpRequest,
   }.asJavaCollection
 
   //Request parameters are composed of form fields and the query part of the uri. Stored in a lazy val in order to only compute it once
-  private lazy val requestParameters = formFields.toMap ++ request.getUri().query().toMap.asScala
+  private lazy val requestParameters =
+    formFields.toMap ++ request.getUri().query().toMap.asScala
 
   private def newSession() = {
     val sessionId = UUID.randomUUID().toString
@@ -43,7 +47,7 @@ case class AkkaHttpWebContext(request: HttpRequest,
 
   private[pac4j] var sessionId: String =
     request.cookies
-      .filter(_.name == sessionCookieName)
+      .filter(_.name == sessionCookieName) // TODO: collect
       .map(_.value)
       .find(session => sessionStorage.sessionExists(session))
       .getOrElse(newSession())
@@ -94,7 +98,8 @@ case class AkkaHttpWebContext(request: HttpRequest,
     }
 
     // Avoid adding duplicate headers, Pac4J expects to overwrite headers like `Location`
-    changes = changes.copy(headers = header :: changes.headers.filter(_.name != name))
+    changes = changes.copy(
+      headers = header :: changes.headers.filter(_.name != name))
   }
 
   @com.github.ghik.silencer.silent("mapValues")
@@ -113,8 +118,10 @@ case class AkkaHttpWebContext(request: HttpRequest,
     ContentType.parse(contentType) match {
       case Right(ct) =>
         changes = changes.copy(contentType = Some(ct))
+
       case Left(_) =>
-        throw new IllegalArgumentException("Invalid response content type " + contentType)
+        throw new IllegalArgumentException(
+          s"Invalid response content type ${contentType}")
     }
   }
 
@@ -127,47 +134,37 @@ case class AkkaHttpWebContext(request: HttpRequest,
   }
 
   override def getRequestHeader(name: String): Optional[String] = {
-    request.headers.find(_.name().toLowerCase() == name.toLowerCase).map(_.value).asJava
+    request.headers.find(_.name().
+      toLowerCase() == name.toLowerCase).map(_.value).asJava
   }
 
-  override def getScheme: String = {
-    request.getUri().getScheme
-  }
+  lazy val getScheme: String = request.getUri().getScheme
 
-  override def isSecure: Boolean = {
-    val scheme = request.getUri().getScheme.toLowerCase
+  def isSecure: Boolean = getScheme.toLowerCase == "https"
 
-    scheme == "https"
-  }
+  override def getRequestMethod: String = request.method.value
 
-  override def getRequestMethod: String = {
-    request.method.value
-  }
+  override def getServerPort: Int = request.getUri().getPort
 
-  override def getServerPort: Int = {
-    request.getUri().getPort
-  }
+  override def setRequestAttribute(name: String, value: scala.AnyRef): Unit =
+    changes = changes.copy(
+      attributes = changes.attributes ++ Map[String, AnyRef](name -> value))
 
-  override def setRequestAttribute(name: String, value: scala.AnyRef): Unit = {
-    changes = changes.copy(attributes = changes.attributes ++ Map[String, AnyRef](name -> value))
-  }
-
-  override def getRequestAttribute(name: String): Optional[AnyRef] = {
+  override def getRequestAttribute(name: String): Optional[AnyRef] =
     changes.attributes.get(name).asJava
-  }
 
-  def getContentType: Option[ContentType] = {
-    changes.contentType
-  }
+  def getContentType: Option[ContentType] = changes.contentType
 
   def getChanges: ResponseChanges = changes
 
   def addResponseSessionCookie(): Unit = {
     val cookie = new Cookie(sessionCookieName, sessionId)
+
     cookie.setSecure(isSecure)
     cookie.setMaxAge(sessionStorage.sessionLifetime.toSeconds.toInt)
     cookie.setHttpOnly(true)
     cookie.setPath("/")
+
     addResponseCookie(cookie)
   }
 
@@ -178,13 +175,21 @@ case class AkkaHttpWebContext(request: HttpRequest,
 }
 
 object AkkaHttpWebContext {
+  def apply(
+    request: HttpRequest,
+    formFields: Seq[(String, String)],
+    sessionStorage: SessionStorage,
+    sessionCookieName: String
+  ): AkkaHttpWebContext = new AkkaHttpWebContext(
+    request, formFields, sessionStorage, sessionCookieName)
 
   //This class is where all the HTTP response changes are stored so that they can later be applied to an HTTP Request
-  case class ResponseChanges private (headers: List[HttpHeader],
-                                      contentType: Option[ContentType],
-                                      content: String,
-                                      cookies: List[HttpCookie],
-                                      attributes: Map[String, AnyRef])
+  case class ResponseChanges private (
+    val headers: List[HttpHeader],
+    val contentType: Option[ContentType],
+    val content: String,
+    val cookies: List[HttpCookie],
+    val attributes: Map[String, AnyRef])
 
   object ResponseChanges {
     def empty: ResponseChanges = {
