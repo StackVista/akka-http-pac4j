@@ -2,7 +2,7 @@ package com.stackstate.pac4j.store
 
 import com.stackstate.pac4j.store.SessionStorage._
 
-import scala.collection.SortedSet
+import scala.collection.immutable.SortedSet
 import scala.concurrent.duration.FiniteDuration
 
 object InMemorySessionStorage {
@@ -18,7 +18,7 @@ class InMemorySessionStorage(override val sessionLifetime: FiniteDuration) exten
   private val sessionLifetimeMs = sessionLifetime.toMillis
 
   private[store] var expiryQueue = SortedSet[ExpiryRecord]()(Ordering.by(v => (v.registered, v.id)))
-  private[store] var sessionData = Map[SessionKey, DataRecord]()
+  private[store] var sessionData = Map.empty[SessionKey, DataRecord]
 
   private[store] def getTime = System.currentTimeMillis()
 

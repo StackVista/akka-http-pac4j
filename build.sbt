@@ -1,25 +1,88 @@
 import Dependencies._
 
+inThisBuild(List(
+  organization := "com.stackstate",
+  scalaVersion := "2.12.13",
+  crossScalaVersions := Seq(scalaVersion.value, "2.13.5"),
+  version := "0.6.2-SNAPSHOT",
+  libraryDependencies ++= {
+    // Silencer
+    val silencerVersion = "1.7.3"
+
+    Seq(
+      compilerPlugin(("com.github.ghik" %% "silencer-plugin" % silencerVersion).
+        cross(CrossVersion.full)),
+      ("com.github.ghik" %% "silencer-lib" % silencerVersion % Provided).
+        cross(CrossVersion.full)
+    )
+  }
+))
+
 lazy val root = (project in file(".")).settings(
-  inThisBuild(List(organization := "com.stackstate", scalaVersion := "2.12.11", version := "0.6.1")),
   name := "akka-http-pac4j",
-  libraryDependencies ++= Seq(akkaHttp, akkaStream, pac4j, scalaTestCore % Test, scalacheck % Test, akkaHttpTestKit % Test, akkaStreamTestKit % Test),
+  libraryDependencies ++= Seq(
+    akkaHttp,
+    akkaStream,
+    pac4j,
+    scalaTestCore % Test,
+    scalacheck % Test,
+    akkaHttpTestKit % Test,
+    akkaStreamTestKit % Test),
   scalacOptions ++= Seq(
-    "-deprecation",
-    "-encoding",
-    "UTF-8",
-    "-feature",
-    "-language:existentials",
-    "-language:higherKinds",
-    "-language:implicitConversions",
-    "-language:postfixOps",
+    "-encoding", "UTF-8",
+    "-explaintypes",
     "-unchecked",
-    // "-Xfatal-warnings", // TODO: Should be reenabled when implementation is complete
+    "-deprecation",
+    "-feature",
+    //"-language:higherKinds",
     "-Xlint",
-    "-Yno-adapted-args",
-    "-Xfuture"
+    "-g:vars"
   ),
-  scalacOptions in (Compile, console) --= Seq("-Ywarn-unused-import", "-Xfatal-warnings")
+  scalacOptions ++= {
+    if (scalaBinaryVersion.value == "2.13") {
+      Seq(
+        "-Werror",
+        "-Wnumeric-widen",
+        "-Wdead-code",
+        "-Wvalue-discard",
+        "-Wunused",
+        "-Wmacros:after",
+        "-Woctal-literal",
+        "-Wextra-implicit")
+
+    } else {
+      Seq(
+        "-Xfatal-warnings",
+        "-Ywarn-numeric-widen",
+        "-Ywarn-dead-code",
+        "-Ywarn-value-discard",
+        "-Ywarn-infer-any",
+        "-Ywarn-unused",
+        "-Ywarn-unused-import",
+        "-Ywarn-macros:after")
+    }
+  },
+  scalacOptions in Test ~= {
+    _.filterNot(_ == "-Werror")
+  },
+  scalacOptions ++= {
+    if (scalaBinaryVersion.value == "2.13") {
+      Seq("-P:silencer:globalFilters=scala.jdk.CollectionConverters")
+    } else {
+      Seq.empty
+    }
+  },
+  scalacOptions in Test += "-P:silencer:globalFilters=discarded\\ non-Unit",
+  scalacOptions in (Compile, console) ~= {
+    _.filterNot { opt =>
+      opt.startsWith("-P") || opt.startsWith("-X") || opt.startsWith("-W")
+    }
+  },
+  scalacOptions in (Test, console) ~= {
+    _.filterNot { opt =>
+      opt.startsWith("-P") || opt.startsWith("-X") || opt.startsWith("-W")
+    }
+  }
 )
 
 publishMavenStyle := true

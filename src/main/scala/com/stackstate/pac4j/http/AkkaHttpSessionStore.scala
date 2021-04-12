@@ -12,16 +12,25 @@ class AkkaHttpSessionStore() extends SessionStore[AkkaHttpWebContext] {
   override def get(context: AkkaHttpWebContext, key: String): Optional[Object] =
     context.sessionStorage.getSessionValue(context.sessionId, key).asJava
 
-  override def set(context: AkkaHttpWebContext, key: String, value: scala.AnyRef): Unit =
+  override def set(context: AkkaHttpWebContext, key: String, value: scala.AnyRef): Unit = {
     context.sessionStorage.setSessionValue(context.sessionId, key, value)
+    ()
+  }
 
   override def destroySession(context: AkkaHttpWebContext): Boolean = context.destroySession()
 
   override def getTrackableSession(context: AkkaHttpWebContext): Optional[AnyRef] = Optional.ofNullable(context.sessionId)
 
   override def buildFromTrackableSession(context: AkkaHttpWebContext, trackableSession: scala.Any): Optional[SessionStore[AkkaHttpWebContext]] = {
-    context.trackSession(trackableSession.asInstanceOf[String])
-    Optional.of(this)
+    trackableSession match {
+      case session: String => {
+        context.trackSession(session)
+        Optional.of(this)
+      }
+
+      case _ =>
+        Optional.empty()
+    }
   }
 
   override def renewSession(context: AkkaHttpWebContext): Boolean = {

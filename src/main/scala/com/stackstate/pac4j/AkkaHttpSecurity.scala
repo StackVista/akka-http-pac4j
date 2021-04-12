@@ -47,15 +47,19 @@ object AkkaHttpSecurity {
     * If the request proceeds, other ways (e.g. basic auth) are assumed to be configured in pac4j in order to pass
     * credentials.
     */
-  private def getFormFields(entity: HttpEntity, enforceFormEncoding: Boolean)(implicit materializer: Materializer,
-                                                                              executionContext: ExecutionContext): Future[Seq[(String, String)]] = {
+  private def getFormFields(
+    entity: HttpEntity,
+    enforceFormEncoding: Boolean,
+  )(implicit materializer: Materializer,
+    executionContext: ExecutionContext,
+  ): Future[Seq[(String, String)]] = {
     Unmarshal(entity)
       .to[StrictForm]
       .fast
       .flatMap { form =>
         val fields = form.fields.collect {
           case (name, field) if name.nonEmpty =>
-            Unmarshal(field).to[String].map(fieldString => (name, fieldString))
+            Unmarshal(field).to[String].map(fieldString => name -> fieldString)
         }
         Future.sequence(fields)
       }
@@ -76,24 +80,28 @@ class AkkaHttpSecurity(config: Config, sessionStorage: SessionStorage, val sessi
 
   import AkkaHttpSecurity._
 
+  @SuppressWarnings(Array("AsInstanceOf"))
   private[pac4j] val securityLogic: AkkaHttpSecurityLogic =
     Option(config.getSecurityLogic) match {
       case Some(v) => v.asInstanceOf[AkkaHttpSecurityLogic]
       case None => new DefaultSecurityLogic[Future[RouteResult], AkkaHttpWebContext]
     }
 
+  @SuppressWarnings(Array("AsInstanceOf"))
   private[pac4j] val actionAdapter: HttpActionAdapter[Future[RouteResult], AkkaHttpWebContext] =
     Option(config.getHttpActionAdapter) match {
       case Some(v) => v.asInstanceOf[HttpActionAdapter[Future[RouteResult], AkkaHttpWebContext]]
       case None => AkkaHttpActionAdapter
     }
 
+  @SuppressWarnings(Array("AsInstanceOf"))
   private[pac4j] val callbackLogic: CallbackLogic[Future[RouteResult], AkkaHttpWebContext] =
     Option(config.getCallbackLogic) match {
       case Some(v) => v.asInstanceOf[AkkaHttpCallbackLogic]
       case None => new DefaultCallbackLogic[Future[RouteResult], AkkaHttpWebContext]
     }
 
+  @SuppressWarnings(Array("AsInstanceOf"))
   private[pac4j] val logoutLogic: LogoutLogic[Future[RouteResult], AkkaHttpWebContext] =
     Option(config.getLogoutLogic) match {
       case Some(v) => v.asInstanceOf[AkkaHttpLogoutLogic]
@@ -106,8 +114,13 @@ class AkkaHttpSecurity(config: Config, sessionStorage: SessionStorage, val sessi
     */
   def withContext(existingContext: Option[AkkaHttpWebContext] = None, formParams: Map[String, String] = Map.empty): Directive1[AkkaHttpWebContext] =
     Directive[Tuple1[AkkaHttpWebContext]] { inner => ctx =>
-      val akkaWebContext =
-        existingContext.getOrElse(AkkaHttpWebContext(ctx.request, formParams.toSeq, sessionStorage, sessionCookieName = sessionCookieName))
+      val akkaWebContext = existingContext.getOrElse(new AkkaHttpWebContext(
+        request = ctx.request,
+        formFields = formParams.toSeq,
+        sessionStorage = sessionStorage,
+        sessionCookieName = sessionCookieName,
+      ))
+
       inner(Tuple1(akkaWebContext))(ctx).map[RouteResult] {
         case Complete(response) => Complete(applyHeadersAndCookiesToResponse(akkaWebContext.getChanges)(response))
         case rejection => rejection
@@ -126,6 +139,7 @@ class AkkaHttpSecurity(config: Config, sessionStorage: SessionStorage, val sessi
     * Authenticate using the provided pac4j configuration. Delivers an AuthenticationRequest which can be used for further authorization
     * this does not apply any authorization ofr filtering.
     */
+  @SuppressWarnings(Array("NullAssignment"))
   def withAuthentication(clients: String = null /* Default null, meaning all defined clients */,
                          multiProfile: Boolean = true,
                          authorizers: String = ""): Directive1[AuthenticatedRequest] =
@@ -133,9 +147,11 @@ class AkkaHttpSecurity(config: Config, sessionStorage: SessionStorage, val sessi
       Directive[Tuple1[AuthenticatedRequest]] { inner => ctx =>
         // TODO This is a hack to ensure that any underlying Futures are scheduled (and handled in case of errors) from here
         // TODO Fix this properly
-        Future.successful(()).flatMap { _ =>
-          securityLogic.perform(akkaWebContext, config, (context: AkkaHttpWebContext, profiles: util.Collection[UserProfile], parameters: AnyRef) => {
-            val authenticatedRequest = AuthenticatedRequest(context, profiles.asScala.toList)
+        Future.successful({}).flatMap { _ =>
+          securityLogic.perform(akkaWebContext, config, (context: AkkaHttpWebContext, profiles: util.Collection[UserProfile], _: AnyRef) => {
+            val authenticatedRequest =
+              AuthenticatedRequest(context, profiles.asScala.toList)
+
             inner(Tuple1(authenticatedRequest))(ctx)
           }, actionAdapter, clients, authorizers, "", multiProfile)
       }
@@ -168,7 +184,7 @@ class AkkaHttpSecurity(config: Config, sessionStorage: SessionStorage, val sessi
              localLogout: Boolean = true,
              destroySession: Boolean = true,
              centralLogout: Boolean = false): Route = {
-    withContext() { akkaWebContext => ctx =>
+    withContext() { akkaWebContext => _ =>
       logoutLogic.perform(akkaWebContext, config, actionAdapter, defaultUrl, logoutPatternUrl, localLogout, destroySession, centralLogout)
     }
   }

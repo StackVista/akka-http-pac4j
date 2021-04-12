@@ -1,7 +1,10 @@
 package com.stackstate.pac4j
 
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpRequest, HttpResponse}
-import org.scalatest.{Matchers, WordSpecLike}
+
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpecLike
+
 import akka.http.scaladsl.model.StatusCodes._
 import akka.util.ByteString
 import com.stackstate.pac4j.AkkaHttpActionAdapterTest.ActionInt
@@ -19,7 +22,7 @@ import org.pac4j.core.exception.http.{
 }
 import org.scalatest.concurrent.ScalaFutures
 
-class AkkaHttpActionAdapterTest extends WordSpecLike with Matchers with ScalaFutures {
+class AkkaHttpActionAdapterTest extends AnyWordSpecLike with Matchers with ScalaFutures {
   "AkkaHttpActionAdapter" should {
     "convert 200 to OK" in withContext { context =>
       AkkaHttpActionAdapter.adapt(new OkAction(""), context).futureValue.response shouldEqual HttpResponse(

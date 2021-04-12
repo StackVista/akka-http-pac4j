@@ -2,12 +2,14 @@ package com.stackstate.pac4j.store
 
 import akka.http.scaladsl.testkit.ScalatestRouteTest
 import com.stackstate.pac4j.store.InMemorySessionStorage._
-import org.scalatest.{Matchers, WordSpecLike}
+
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpecLike
 import scala.language.reflectiveCalls
 
 import scala.concurrent.duration._
 
-class InMemorySessionStorageTest extends WordSpecLike with Matchers with ScalatestRouteTest {
+class InMemorySessionStorageTest extends AnyWordSpecLike with Matchers with ScalatestRouteTest {
 
   def mockedTimeStorage(lifetime: FiniteDuration = 0.millis) = new InMemorySessionStorage(lifetime) {
     var time: Long = 1
