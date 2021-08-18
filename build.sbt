@@ -19,8 +19,8 @@ lazy val root = (project in file(".")).settings(
     "-Xlint"
   ),
   scalacOptions in (Compile, console) --= Seq("-Wunused:imports", "-Werror"),
-  scalacOptions ++= Seq("-target:jvm-1.8"),
-  javacOptions ++= Seq("-source", "1.8", "-target", "1.8")
+  scalacOptions ++= Seq("-target:11"),
+  javacOptions ++= Seq("-source", "11", "-target", "11"),
 )
 
 publishArtifact in (Compile, packageSrc) := true
