@@ -4,7 +4,7 @@ inThisBuild(List(
   organization := "com.stackstate",
   scalaVersion := "2.12.13",
   crossScalaVersions := Seq(scalaVersion.value, "2.13.5"),
-  version := "0.6.2-SNAPSHOT",
+  version := "0.6.3-SNAPSHOT",
   libraryDependencies ++= {
     // Silencer
     val silencerVersion = "1.7.3"

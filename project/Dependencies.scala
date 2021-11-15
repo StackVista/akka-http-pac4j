@@ -3,7 +3,7 @@ import sbt._
 object Dependencies {
   val scalacheckVersion = "1.14.3"
   val akkaHttpVersion = "10.2.0"
-  val akkaStreamsVersion = "2.6.9"
+  val akkaStreamsVersion = "2.6.17"
   val pac4jVersion = "4.4.0"
   val scalaTestVersion = "3.2.2"
 
