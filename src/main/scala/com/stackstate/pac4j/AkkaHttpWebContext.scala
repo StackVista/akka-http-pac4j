@@ -20,7 +20,7 @@ import scala.collection.JavaConverters._
  * and stores changes that are produced by pac4j 
  * and need to be applied to an HTTP response.
  */
-final class AkkaHttpWebContext(
+class AkkaHttpWebContext(
   val request: HttpRequest,
   val formFields: Seq[(String, String)],
   private[pac4j] val sessionStorage: SessionStorage,
