@@ -1,35 +1,29 @@
 import Dependencies._
 
-inThisBuild(List(
-  organization := "com.stackstate",
-  scalaVersion := "2.12.13",
-  crossScalaVersions := Seq(scalaVersion.value, "2.13.5"),
-  version := "0.7.1-SNAPSHOT",
-  libraryDependencies ++= {
-    // Silencer
-    val silencerVersion = "1.7.3"
+inThisBuild(
+  List(
+    organization := "com.stackstate",
+    scalaVersion := "2.12.13",
+    crossScalaVersions := Seq(scalaVersion.value, "2.13.5"),
+    version := "0.7.1",
+    libraryDependencies ++= {
+      // Silencer
+      val silencerVersion = "1.7.3"
 
-    Seq(
-      compilerPlugin(("com.github.ghik" %% "silencer-plugin" % silencerVersion).
-        cross(CrossVersion.full)),
-      ("com.github.ghik" %% "silencer-lib" % silencerVersion % Provided).
-        cross(CrossVersion.full)
-    )
-  }
-))
+      Seq(
+        compilerPlugin(("com.github.ghik" %% "silencer-plugin" % silencerVersion).cross(CrossVersion.full)),
+        ("com.github.ghik" %% "silencer-lib" % silencerVersion % Provided).cross(CrossVersion.full)
+      )
+    }
+  )
+)
 
 lazy val root = (project in file(".")).settings(
   name := "akka-http-pac4j",
-  libraryDependencies ++= Seq(
-    akkaHttp,
-    akkaStream,
-    pac4j,
-    scalaTestCore % Test,
-    scalacheck % Test,
-    akkaHttpTestKit % Test,
-    akkaStreamTestKit % Test),
+  libraryDependencies ++= Seq(akkaHttp, akkaStream, pac4j, scalaTestCore % Test, scalacheck % Test, akkaHttpTestKit % Test, akkaStreamTestKit % Test),
   scalacOptions ++= Seq(
-    "-encoding", "UTF-8",
+    "-encoding",
+    "UTF-8",
     "-explaintypes",
     "-unchecked",
     "-deprecation",
@@ -40,15 +34,7 @@ lazy val root = (project in file(".")).settings(
   ),
   scalacOptions ++= {
     if (scalaBinaryVersion.value == "2.13") {
-      Seq(
-        "-Werror",
-        "-Wnumeric-widen",
-        "-Wdead-code",
-        "-Wvalue-discard",
-        "-Wunused",
-        "-Wmacros:after",
-        "-Woctal-literal",
-        "-Wextra-implicit")
+      Seq("-Werror", "-Wnumeric-widen", "-Wdead-code", "-Wvalue-discard", "-Wunused", "-Wmacros:after", "-Woctal-literal", "-Wextra-implicit")
 
     } else {
       Seq(
@@ -59,7 +45,8 @@ lazy val root = (project in file(".")).settings(
         "-Ywarn-infer-any",
         "-Ywarn-unused",
         "-Ywarn-unused-import",
-        "-Ywarn-macros:after")
+        "-Ywarn-macros:after"
+      )
     }
   },
   scalacOptions in Test ~= {

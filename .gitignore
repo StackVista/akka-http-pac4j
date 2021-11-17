@@ -34,6 +34,7 @@ out/
 # Metals
 **/metals.sbt
 **/.metals
+.bloop/
 
 # Sublime
 *.sublime*
