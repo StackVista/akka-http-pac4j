@@ -16,16 +16,15 @@ import compat.java8.OptionConverters._
 import scala.collection.JavaConverters._
 
 /**
- * The AkkaHttpWebContext is responsible for wrapping an HTTP request 
- * and stores changes that are produced by pac4j 
- * and need to be applied to an HTTP response.
- */
-class AkkaHttpWebContext(
-  val request: HttpRequest,
-  val formFields: Seq[(String, String)],
-  private[pac4j] val sessionStorage: SessionStorage,
-  val sessionCookieName: String
-) extends WebContext {
+  * The AkkaHttpWebContext is responsible for wrapping an HTTP request
+  * and stores changes that are produced by pac4j
+  * and need to be applied to an HTTP response.
+  */
+class AkkaHttpWebContext(val request: HttpRequest,
+                         val formFields: Seq[(String, String)],
+                         private[pac4j] val sessionStorage: SessionStorage,
+                         val sessionCookieName: String)
+    extends WebContext {
   import com.stackstate.pac4j.AkkaHttpWebContext._
 
   private var changes = ResponseChanges.empty
@@ -98,8 +97,7 @@ class AkkaHttpWebContext(
     }
 
     // Avoid adding duplicate headers, Pac4J expects to overwrite headers like `Location`
-    changes = changes.copy(
-      headers = header :: changes.headers.filter(_.name != name))
+    changes = changes.copy(headers = header :: changes.headers.filter(_.name != name))
   }
 
   @com.github.ghik.silencer.silent("mapValues")
@@ -120,8 +118,7 @@ class AkkaHttpWebContext(
         changes = changes.copy(contentType = Some(ct))
 
       case Left(_) =>
-        throw new IllegalArgumentException(
-          s"Invalid response content type ${contentType}")
+        throw new IllegalArgumentException(s"Invalid response content type ${contentType}")
     }
   }
 
@@ -134,8 +131,7 @@ class AkkaHttpWebContext(
   }
 
   override def getRequestHeader(name: String): Optional[String] = {
-    request.headers.find(_.name().
-      toLowerCase() == name.toLowerCase).map(_.value).asJava
+    request.headers.find(_.name().toLowerCase() == name.toLowerCase).map(_.value).asJava
   }
 
   lazy val getScheme: String = request.getUri().getScheme
@@ -147,8 +143,7 @@ class AkkaHttpWebContext(
   override def getServerPort: Int = request.getUri().getPort
 
   override def setRequestAttribute(name: String, value: scala.AnyRef): Unit =
-    changes = changes.copy(
-      attributes = changes.attributes ++ Map[String, AnyRef](name -> value))
+    changes = changes.copy(attributes = changes.attributes ++ Map[String, AnyRef](name -> value))
 
   override def getRequestAttribute(name: String): Optional[AnyRef] =
     changes.attributes.get(name).asJava
@@ -168,6 +163,11 @@ class AkkaHttpWebContext(
     addResponseCookie(cookie)
   }
 
+  def sessionCookieIsValid(): Boolean = {
+    val cookie = request.cookies.find(_.name == sessionCookieName)
+    cookie.exists(c => sessionStorage.sessionExists(c.value))
+  }
+
   def addResponseCsrfCookie(): Unit = {
     CsrfCookieAuthorizer(this, Some(sessionStorage.sessionLifetime))
     ()
@@ -175,21 +175,15 @@ class AkkaHttpWebContext(
 }
 
 object AkkaHttpWebContext {
-  def apply(
-    request: HttpRequest,
-    formFields: Seq[(String, String)],
-    sessionStorage: SessionStorage,
-    sessionCookieName: String
-  ): AkkaHttpWebContext = new AkkaHttpWebContext(
-    request, formFields, sessionStorage, sessionCookieName)
+  def apply(request: HttpRequest, formFields: Seq[(String, String)], sessionStorage: SessionStorage, sessionCookieName: String): AkkaHttpWebContext =
+    new AkkaHttpWebContext(request, formFields, sessionStorage, sessionCookieName)
 
   //This class is where all the HTTP response changes are stored so that they can later be applied to an HTTP Request
-  case class ResponseChanges private (
-    val headers: List[HttpHeader],
-    val contentType: Option[ContentType],
-    val content: String,
-    val cookies: List[HttpCookie],
-    val attributes: Map[String, AnyRef])
+  case class ResponseChanges private (val headers: List[HttpHeader],
+                                      val contentType: Option[ContentType],
+                                      val content: String,
+                                      val cookies: List[HttpCookie],
+                                      val attributes: Map[String, AnyRef])
 
   object ResponseChanges {
     def empty: ResponseChanges = {
