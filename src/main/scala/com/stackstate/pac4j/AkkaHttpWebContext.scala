@@ -160,14 +160,14 @@ class AkkaHttpWebContext(val request: HttpRequest,
   def getChanges: ResponseChanges = changes
 
   def addResponseSessionCookie(): Unit = {
-    val cookie = new Cookie(sessionCookieName, getOrCreateSessionId)
-
-    cookie.setSecure(isSecure)
-    cookie.setMaxAge(sessionStorage.sessionLifetime.toSeconds.toInt)
-    cookie.setHttpOnly(true)
-    cookie.setPath("/")
-
-    addResponseCookie(cookie)
+    getSessionId.foreach { sessionId =>
+      val cookie = new Cookie(sessionCookieName, sessionId)
+      cookie.setSecure(isSecure)
+      cookie.setMaxAge(sessionStorage.sessionLifetime.toSeconds.toInt)
+      cookie.setHttpOnly(true)
+      cookie.setPath("/")
+      addResponseCookie(cookie)
+    }
   }
 
   def sessionCookieIsValid(): Boolean = {

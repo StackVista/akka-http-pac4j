@@ -21,7 +21,8 @@ class AkkaHttpSessionStore() extends SessionStore[AkkaHttpWebContext] {
 
   override def destroySession(context: AkkaHttpWebContext): Boolean = context.destroySession()
 
-  override def getTrackableSession(context: AkkaHttpWebContext): Optional[AnyRef] = Optional.ofNullable(context.getOrCreateSessionId)
+  override def getTrackableSession(context: AkkaHttpWebContext): Optional[AnyRef] =
+    context.getSessionId.asInstanceOf[Option[AnyRef]].asJava
 
   override def buildFromTrackableSession(context: AkkaHttpWebContext, trackableSession: scala.Any): Optional[SessionStore[AkkaHttpWebContext]] = {
     trackableSession match {

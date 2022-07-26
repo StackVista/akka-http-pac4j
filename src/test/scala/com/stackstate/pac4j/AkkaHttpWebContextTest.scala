@@ -105,13 +105,15 @@ class AkkaHttpWebContextTest extends AnyWordSpecLike with Matchers {
 
     "add a cookie when the session is persisted and put in the expected data" in withContext(sessionStorage = new ForgetfulSessionStorage {
       override val sessionLifetime = 3.seconds
+
       override def renewSession(session: SessionKey): Boolean = true
     }) { webContext =>
+      val sessionId = webContext.getOrCreateSessionId()
       webContext.addResponseSessionCookie()
       webContext.getChanges.cookies.find(_.name == AkkaHttpWebContext.DEFAULT_COOKIE_NAME) shouldBe Some(
         HttpCookie(
           name = AkkaHttpWebContext.DEFAULT_COOKIE_NAME,
-          value = webContext.getOrCreateSessionId(),
+          value = sessionId,
           expires = None,
           maxAge = Some(3),
           domain = None,
@@ -129,10 +131,17 @@ class AkkaHttpWebContextTest extends AnyWordSpecLike with Matchers {
       webContext.getChanges.cookies.find(_.name == AkkaHttpWebContext.DEFAULT_COOKIE_NAME) shouldBe None
     }
 
+    "don't add a cookie when the session is empty" in withContext(sessionStorage = new ForgetfulSessionStorage {
+    }) { webContext =>
+      webContext.getChanges.cookies.find(_.name == AkkaHttpWebContext.DEFAULT_COOKIE_NAME) shouldBe None
+    }
+
     "make the session cookie secure when running over https" in withContext(scheme = "https", sessionStorage = new ForgetfulSessionStorage {
       override val sessionLifetime = 3.seconds
+
       override def renewSession(session: SessionKey): Boolean = true
     }) { webContext =>
+      webContext.getOrCreateSessionId()
       webContext.addResponseSessionCookie()
       webContext.getChanges.cookies.find(_.name == AkkaHttpWebContext.DEFAULT_COOKIE_NAME).get.secure shouldBe true
     }
@@ -141,7 +150,9 @@ class AkkaHttpWebContextTest extends AnyWordSpecLike with Matchers {
       cookies = List(Cookie(AkkaHttpWebContext.DEFAULT_COOKIE_NAME, "my_session")),
       sessionStorage = new ForgetfulSessionStorage {
         override val sessionLifetime = 3.seconds
+
         override def sessionExists(key: SessionKey): Boolean = true
+
         override def renewSession(session: SessionKey): Boolean = true
       }
     ) { webContext =>
@@ -153,10 +164,14 @@ class AkkaHttpWebContextTest extends AnyWordSpecLike with Matchers {
       cookies = List(Cookie(AkkaHttpWebContext.DEFAULT_COOKIE_NAME, "some_session"), Cookie(AkkaHttpWebContext.DEFAULT_COOKIE_NAME, "my_session")),
       sessionStorage = new ForgetfulSessionStorage {
         override val sessionLifetime = 3.seconds
+
         override def sessionExists(key: SessionKey): Boolean = key == "my_session"
+
         override def renewSession(session: SessionKey): Boolean = true
       }
     ) { webContext =>
+      webContext.trackSession("my_session") // same as set
+      webContext.getSessionStore.set(webContext, "my_session", "foo")
       webContext.addResponseSessionCookie()
       webContext.getChanges.cookies.find(_.name == AkkaHttpWebContext.DEFAULT_COOKIE_NAME).get.value shouldEqual "my_session"
     }
@@ -165,7 +180,9 @@ class AkkaHttpWebContextTest extends AnyWordSpecLike with Matchers {
       cookies = List(Cookie(AkkaHttpWebContext.DEFAULT_COOKIE_NAME, "my_session")),
       sessionStorage = new ForgetfulSessionStorage {
         override val sessionLifetime = 3.seconds
+
         override def sessionExists(key: SessionKey): Boolean = false
+
         override def renewSession(session: SessionKey): Boolean = true
       }
     ) { webContext =>
@@ -176,6 +193,7 @@ class AkkaHttpWebContextTest extends AnyWordSpecLike with Matchers {
       cookies = List(Cookie(AkkaHttpWebContext.DEFAULT_COOKIE_NAME, "my_session")),
       sessionStorage = new ForgetfulSessionStorage {
         override val sessionLifetime = 3.seconds
+
         override def renewSession(session: SessionKey): Boolean = true
       }
     ) { webContext =>
@@ -188,6 +206,8 @@ class AkkaHttpWebContextTest extends AnyWordSpecLike with Matchers {
       sessionStorage = new ForgetfulSessionStorage {
         override val sessionLifetime = 3.seconds
         override def renewSession(session: SessionKey): Boolean = true
+
+        override def sessionExists(sessionKey: SessionKey): Boolean = true
       }
     ) { webContext =>
       webContext.trackSession("my_session2")

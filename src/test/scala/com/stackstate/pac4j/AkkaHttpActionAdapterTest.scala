@@ -31,11 +31,23 @@ class AkkaHttpActionAdapterTest extends AnyWordSpecLike with Matchers with Scala
         HttpEntity(ContentTypes.`application/octet-stream`, ByteString(""))
       )
     }
-    "convert 401 to Unauthorized" in withContext { context =>
+    "convert 401 to Unauthorized for direct clients" in withContext { context =>
+      AkkaHttpActionAdapter.adapt(UnauthorizedAction.INSTANCE, context).futureValue.response shouldEqual HttpResponse(Unauthorized)
+      context.getChanges.cookies.map(_.name) shouldBe List()
+    }
+    "convert 401 to Unauthorized for indirect clients" in withContext { context =>
+      context.getSessionStore.set(context, "state", "foo")
       AkkaHttpActionAdapter.adapt(UnauthorizedAction.INSTANCE, context).futureValue.response shouldEqual HttpResponse(Unauthorized)
       context.getChanges.cookies.map(_.name) shouldBe List(AkkaHttpWebContext.DEFAULT_COOKIE_NAME)
     }
-    "convert 302 to SeeOther (to support login flow)" in withContext { context =>
+    "convert 302 to SeeOther (to support login flow) (direct client)" in withContext { context =>
+      val r = AkkaHttpActionAdapter.adapt(new FoundAction("/login"), context).futureValue.response
+      r.status shouldEqual SeeOther
+      r.headers.head.value() shouldEqual "/login"
+      context.getChanges.cookies.map(_.name) shouldBe List()
+    }
+    "convert 302 to SeeOther (to support login flow) (indirect client)" in withContext { context =>
+      context.getSessionStore.set(context, "state", "foo")
       val r = AkkaHttpActionAdapter.adapt(new FoundAction("/login"), context).futureValue.response
       r.status shouldEqual SeeOther
       r.headers.head.value() shouldEqual "/login"
