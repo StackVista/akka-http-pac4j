@@ -111,7 +111,7 @@ class AkkaHttpWebContextTest extends AnyWordSpecLike with Matchers {
       webContext.getChanges.cookies.find(_.name == AkkaHttpWebContext.DEFAULT_COOKIE_NAME) shouldBe Some(
         HttpCookie(
           name = AkkaHttpWebContext.DEFAULT_COOKIE_NAME,
-          value = webContext.sessionId,
+          value = webContext.getOrCreateSessionId(),
           expires = None,
           maxAge = Some(3),
           domain = None,
@@ -169,7 +169,7 @@ class AkkaHttpWebContextTest extends AnyWordSpecLike with Matchers {
         override def renewSession(session: SessionKey): Boolean = true
       }
     ) { webContext =>
-      webContext.sessionId shouldNot equal("my_session")
+      webContext.getOrCreateSessionId() shouldNot equal("my_session")
     }
 
     "creates a new sessionId when the session was destroyed" in withContext(
@@ -180,7 +180,7 @@ class AkkaHttpWebContextTest extends AnyWordSpecLike with Matchers {
       }
     ) { webContext =>
       webContext.destroySession()
-      webContext.sessionId shouldNot equal("my_session")
+      webContext.getOrCreateSessionId() shouldNot equal("my_session")
     }
 
     "stores the trackable session when requested" in withContext(
@@ -191,7 +191,7 @@ class AkkaHttpWebContextTest extends AnyWordSpecLike with Matchers {
       }
     ) { webContext =>
       webContext.trackSession("my_session2")
-      webContext.sessionId shouldBe "my_session2"
+      webContext.getOrCreateSessionId() shouldBe "my_session2"
     }
   }
 

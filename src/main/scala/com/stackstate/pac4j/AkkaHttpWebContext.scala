@@ -1,15 +1,12 @@
 package com.stackstate.pac4j
 
 import java.util.{Optional, UUID}
-
 import akka.http.scaladsl.model.HttpHeader.ParsingResult.{Error, Ok}
 import akka.http.scaladsl.model.headers.HttpCookie
 import akka.http.scaladsl.model.{ContentType, HttpHeader, HttpRequest}
-
 import com.stackstate.pac4j.authorizer.CsrfCookieAuthorizer
 import com.stackstate.pac4j.http.AkkaHttpSessionStore
 import com.stackstate.pac4j.store.SessionStorage
-
 import org.pac4j.core.context.{Cookie, WebContext}
 
 import compat.java8.OptionConverters._
@@ -24,7 +21,8 @@ class AkkaHttpWebContext(val request: HttpRequest,
                          val formFields: Seq[(String, String)],
                          private[pac4j] val sessionStorage: SessionStorage,
                          val sessionCookieName: String)
-    extends WebContext {
+  extends WebContext {
+
   import com.stackstate.pac4j.AkkaHttpWebContext._
 
   private var changes = ResponseChanges.empty
@@ -38,28 +36,37 @@ class AkkaHttpWebContext(val request: HttpRequest,
   private lazy val requestParameters =
     formFields.toMap ++ request.getUri().query().toMap.asScala
 
-  private def newSession() = {
-    val sessionId = UUID.randomUUID().toString
-    sessionStorage.createSessionIfNeeded(sessionId)
+  private var sessionId: Option[String] = request.cookies
+    .find(_.name == sessionCookieName)
+    .map(_.value)
+
+  def getOrCreateSessionId(): String = {
+    val newSession =
+      sessionId
+        .find(session => sessionStorage.sessionExists(session))
+        .getOrElse {
+          val sessionId = UUID.randomUUID().toString
+          sessionStorage.createSessionIfNeeded(sessionId)
+          sessionId
+        }
+
+    sessionId = Some(newSession)
+    newSession
+  }
+
+  def getSessionId: Option[String] = {
     sessionId
   }
 
-  private[pac4j] var sessionId: String =
-    request.cookies
-      .filter(_.name == sessionCookieName) // TODO: collect
-      .map(_.value)
-      .find(session => sessionStorage.sessionExists(session))
-      .getOrElse(newSession())
-
-  private[pac4j] def destroySession() = {
-    sessionStorage.destroySession(sessionId)
-    sessionId = newSession()
+  private[pac4j] def destroySession(): Boolean = {
+    sessionId.foreach(sessionStorage.destroySession)
+    sessionId = None
     true
   }
 
   private[pac4j] def trackSession(session: String) = {
     sessionStorage.createSessionIfNeeded(session)
-    sessionId = session
+    sessionId = Some(session)
     true
   }
 
@@ -118,7 +125,7 @@ class AkkaHttpWebContext(val request: HttpRequest,
         changes = changes.copy(contentType = Some(ct))
 
       case Left(_) =>
-        throw new IllegalArgumentException(s"Invalid response content type ${contentType}")
+        throw new IllegalArgumentException(s"Invalid response content type $contentType")
     }
   }
 
@@ -153,7 +160,7 @@ class AkkaHttpWebContext(val request: HttpRequest,
   def getChanges: ResponseChanges = changes
 
   def addResponseSessionCookie(): Unit = {
-    val cookie = new Cookie(sessionCookieName, sessionId)
+    val cookie = new Cookie(sessionCookieName, getOrCreateSessionId)
 
     cookie.setSecure(isSecure)
     cookie.setMaxAge(sessionStorage.sessionLifetime.toSeconds.toInt)
@@ -179,11 +186,11 @@ object AkkaHttpWebContext {
     new AkkaHttpWebContext(request, formFields, sessionStorage, sessionCookieName)
 
   //This class is where all the HTTP response changes are stored so that they can later be applied to an HTTP Request
-  case class ResponseChanges private (val headers: List[HttpHeader],
-                                      val contentType: Option[ContentType],
-                                      val content: String,
-                                      val cookies: List[HttpCookie],
-                                      val attributes: Map[String, AnyRef])
+  case class ResponseChanges private(headers: List[HttpHeader],
+                                     contentType: Option[ContentType],
+                                     content: String,
+                                     cookies: List[HttpCookie],
+                                     attributes: Map[String, AnyRef])
 
   object ResponseChanges {
     def empty: ResponseChanges = {

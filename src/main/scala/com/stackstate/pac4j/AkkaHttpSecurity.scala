@@ -1,7 +1,6 @@
 package com.stackstate.pac4j
 
 import java.util
-
 import akka.http.scaladsl.common.StrictForm
 import akka.http.scaladsl.model.{HttpEntity, HttpHeader, HttpResponse}
 import akka.http.scaladsl.server.Directives.{authorize => akkaHttpAuthorize}
@@ -19,6 +18,7 @@ import org.pac4j.core.profile.UserProfile
 import akka.http.scaladsl.util.FastFuture._
 import akka.stream.Materializer
 import com.stackstate.pac4j.store.SessionStorage
+import org.pac4j.core.matching.matcher.DefaultMatchers
 
 import scala.collection.JavaConverters._
 import scala.concurrent.{ExecutionContext, Future}
@@ -48,11 +48,11 @@ object AkkaHttpSecurity {
     * credentials.
     */
   private def getFormFields(
-    entity: HttpEntity,
-    enforceFormEncoding: Boolean,
-  )(implicit materializer: Materializer,
-    executionContext: ExecutionContext,
-  ): Future[Seq[(String, String)]] = {
+                             entity: HttpEntity,
+                             enforceFormEncoding: Boolean,
+                           )(implicit materializer: Materializer,
+                             executionContext: ExecutionContext,
+                           ): Future[Seq[(String, String)]] = {
     Unmarshal(entity)
       .to[StrictForm]
       .fast
@@ -113,26 +113,28 @@ class AkkaHttpSecurity(config: Config, sessionStorage: SessionStorage, val sessi
     * an AkkaHttpWebContext and any changes to this context are applied when the route returns (e.g. headers/cookies).
     */
   def withContext(existingContext: Option[AkkaHttpWebContext] = None, formParams: Map[String, String] = Map.empty): Directive1[AkkaHttpWebContext] =
-    Directive[Tuple1[AkkaHttpWebContext]] { inner => ctx =>
-      val akkaWebContext = existingContext.getOrElse(new AkkaHttpWebContext(
-        request = ctx.request,
-        formFields = formParams.toSeq,
-        sessionStorage = sessionStorage,
-        sessionCookieName = sessionCookieName,
-      ))
+    Directive[Tuple1[AkkaHttpWebContext]] { inner =>
+      ctx =>
+        val akkaWebContext = existingContext.getOrElse(new AkkaHttpWebContext(
+          request = ctx.request,
+          formFields = formParams.toSeq,
+          sessionStorage = sessionStorage,
+          sessionCookieName = sessionCookieName,
+        ))
 
-      inner(Tuple1(akkaWebContext))(ctx).map[RouteResult] {
-        case Complete(response) => Complete(applyHeadersAndCookiesToResponse(akkaWebContext.getChanges)(response))
-        case rejection => rejection
-      }
+        inner(Tuple1(akkaWebContext))(ctx).map[RouteResult] {
+          case Complete(response) => Complete(applyHeadersAndCookiesToResponse(akkaWebContext.getChanges)(response))
+          case rejection => rejection
+        }
     }
 
   def withFormParameters(enforceFormEncoding: Boolean): Directive1[Map[String, String]] =
-    Directive[Tuple1[Map[String, String]]] { inner => ctx =>
-      import ctx.materializer
-      getFormFields(ctx.request.entity, enforceFormEncoding).flatMap { params =>
-        inner(Tuple1(params.toMap))(ctx)
-      }
+    Directive[Tuple1[Map[String, String]]] { inner =>
+      ctx =>
+        import ctx.materializer
+        getFormFields(ctx.request.entity, enforceFormEncoding).flatMap { params =>
+          inner(Tuple1(params.toMap))(ctx)
+        }
     }
 
   /**
@@ -140,21 +142,26 @@ class AkkaHttpSecurity(config: Config, sessionStorage: SessionStorage, val sessi
     * this does not apply any authorization ofr filtering.
     */
   @SuppressWarnings(Array("NullAssignment"))
-  def withAuthentication(clients: String = null /* Default null, meaning all defined clients */,
+  def withAuthentication(clients: String = null /* Default null, meaning all defined clients */ ,
                          multiProfile: Boolean = true,
                          authorizers: String = ""): Directive1[AuthenticatedRequest] =
     withContext().flatMap { akkaWebContext =>
-      Directive[Tuple1[AuthenticatedRequest]] { inner => ctx =>
-        // TODO This is a hack to ensure that any underlying Futures are scheduled (and handled in case of errors) from here
-        // TODO Fix this properly
-        Future.successful({}).flatMap { _ =>
-          securityLogic.perform(akkaWebContext, config, (context: AkkaHttpWebContext, profiles: util.Collection[UserProfile], _: AnyRef) => {
-            val authenticatedRequest =
-              AuthenticatedRequest(context, profiles.asScala.toList)
+      Directive[Tuple1[AuthenticatedRequest]] { inner =>
+        ctx =>
+          // TODO This is a hack to ensure that any underlying Futures are scheduled (and handled in case of errors) from here
+          // TODO Fix this properly
+          Future.successful({}).flatMap { _ =>
+            val securityAccessAdapter: SecurityGrantedAccessAdapter[Future[RouteResult], AkkaHttpWebContext] =
+              (context: AkkaHttpWebContext, profiles: util.Collection[UserProfile], _: AnyRef) => {
+                val authenticatedRequest = AuthenticatedRequest(context, profiles.asScala.toList)
+                inner(Tuple1(authenticatedRequest))(ctx)
+              }
 
-            inner(Tuple1(authenticatedRequest))(ctx)
-          }, actionAdapter, clients, authorizers, "", multiProfile)
-      }
+            securityLogic.perform(akkaWebContext, config, securityAccessAdapter, actionAdapter, clients, authorizers, DefaultMatchers.SECURITYHEADERS, multiProfile).map {
+              result =>
+                result
+            }
+          }
       }
     }
 
@@ -169,13 +176,14 @@ class AkkaHttpSecurity(config: Config, sessionStorage: SessionStorage, val sessi
                existingContext: Option[AkkaHttpWebContext] = None,
                setCsrfCookie: Boolean = true): Route =
     withFormParameters(enforceFormEncoding) { formParams =>
-      withContext(existingContext, formParams) { akkaWebContext => _ =>
-        callbackLogic.perform(akkaWebContext, config, actionAdapter, defaultUrl, saveInSession, multiProfile, true, defaultClient.orNull).map {
-          result =>
-            akkaWebContext.addResponseSessionCookie()
-            if (setCsrfCookie) akkaWebContext.addResponseCsrfCookie()
-            result
-        }
+      withContext(existingContext, formParams) { akkaWebContext =>
+        _ =>
+          callbackLogic.perform(akkaWebContext, config, actionAdapter, defaultUrl, saveInSession, multiProfile, true, defaultClient.orNull).map {
+            result =>
+              akkaWebContext.addResponseSessionCookie()
+              if (setCsrfCookie) akkaWebContext.addResponseCsrfCookie()
+              result
+          }
       }
     }
 
@@ -184,8 +192,9 @@ class AkkaHttpSecurity(config: Config, sessionStorage: SessionStorage, val sessi
              localLogout: Boolean = true,
              destroySession: Boolean = true,
              centralLogout: Boolean = false): Route = {
-    withContext() { akkaWebContext => _ =>
-      logoutLogic.perform(akkaWebContext, config, actionAdapter, defaultUrl, logoutPatternUrl, localLogout, destroySession, centralLogout)
+    withContext() { akkaWebContext =>
+      _ =>
+        logoutLogic.perform(akkaWebContext, config, actionAdapter, defaultUrl, logoutPatternUrl, localLogout, destroySession, centralLogout)
     }
   }
 
