@@ -6,7 +6,7 @@ import com.stackstate.pac4j.AkkaHttpWebContext
 import org.pac4j.core.context.session.SessionStore
 
 class AkkaHttpSessionStore() extends SessionStore[AkkaHttpWebContext] {
-  override def getOrCreateSessionId(context: AkkaHttpWebContext): String = context.getOrCreateSessionId
+  override def getOrCreateSessionId(context: AkkaHttpWebContext): String = context.getOrCreateSessionId()
 
   override def get(context: AkkaHttpWebContext, key: String): Optional[Object] =
     context.getSessionId match {
@@ -15,7 +15,7 @@ class AkkaHttpSessionStore() extends SessionStore[AkkaHttpWebContext] {
     }
 
   override def set(context: AkkaHttpWebContext, key: String, value: scala.AnyRef): Unit = {
-    context.sessionStorage.setSessionValue(context.getOrCreateSessionId, key, value)
+    context.sessionStorage.setSessionValue(context.getOrCreateSessionId(), key, value)
     ()
   }
 
