@@ -1,9 +1,7 @@
 package com.stackstate.pac4j
 
 import java.{lang, util}
-
 import com.github.ghik.silencer.silent
-
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.{AuthorizationFailedRejection, RouteResult}
@@ -19,8 +17,8 @@ import org.pac4j.core.credentials.UsernamePasswordCredentials
 import org.pac4j.core.engine.{DefaultCallbackLogic, DefaultLogoutLogic, DefaultSecurityLogic, SecurityGrantedAccessAdapter}
 import org.pac4j.core.exception.http.HttpAction
 import org.pac4j.core.http.adapter.HttpActionAdapter
+import org.pac4j.core.matching.matcher.DefaultMatchers
 import org.pac4j.core.profile.{CommonProfile, UserProfile}
-
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
 
@@ -63,7 +61,8 @@ class AkkaHttpSecurityTest extends AnyWordSpecLike with Matchers with ScalatestR
                              multiProfile: lang.Boolean,
                              parameters: AnyRef*): Future[RouteResult] = {
           clients shouldBe "myclients"
-          matchers shouldBe "" // Empty string means always matching hit in RequireAllMatchersChecker.java
+          matchers shouldBe DefaultMatchers.SECURITYHEADERS
+          matchers should not be empty
           authorizers shouldBe "myauthorizers" // Empty string means always authorize in DefaultAuthorizationCheck.java
           multiProfile shouldBe false
 
@@ -103,12 +102,11 @@ class AkkaHttpSecurityTest extends AnyWordSpecLike with Matchers with ScalatestR
 
       val akkaHttpSecurity = new AkkaHttpSecurity(config, new ForgetfulSessionStorage)
       val route =
-        akkaHttpSecurity.withAuthentication() { authenticated =>
-          {
-            authenticated.profiles.size shouldBe 1
-            authenticated.profiles.head shouldBe profile
-            complete("called!")
-          }
+        akkaHttpSecurity.withAuthentication() { authenticated => {
+          authenticated.profiles.size shouldBe 1
+          authenticated.profiles.head shouldBe profile
+          complete("called!")
+        }
         }
 
       Get("/") ~> route ~> check {
@@ -246,7 +244,7 @@ class AkkaHttpSecurityTest extends AnyWordSpecLike with Matchers with ScalatestR
                              multiProfile: lang.Boolean,
                              renewSession: lang.Boolean,
                              client: String): Future[RouteResult] = {
-          existingContext.sessionId shouldBe context.sessionId
+          existingContext.getSessionId shouldBe context.getSessionId
           httpActionAdapter shouldBe actionAdapter
           defaultUrl shouldBe "/blaat"
           saveInSession shouldBe false
@@ -366,12 +364,12 @@ class AkkaHttpSecurityTest extends AnyWordSpecLike with Matchers with ScalatestR
 
           val profiles = new util.HashMap[String, UserProfile]()
           profiles.put("john", new CommonProfile())
-          context.sessionStorage.setSessionValue(context.sessionId, Pac4jConstants.USER_PROFILES, profiles)
-          context.sessionStorage.getSessionValue(context.sessionId, Pac4jConstants.USER_PROFILES) contains profiles
+          context.sessionStorage.setSessionValue(context.getOrCreateSessionId(), Pac4jConstants.USER_PROFILES, profiles)
+          context.sessionStorage.getSessionValue(context.getOrCreateSessionId(), Pac4jConstants.USER_PROFILES) contains profiles
 
           val response = super
             .perform(context, config, httpActionAdapter, defaultUrl, inputLogoutUrlPattern, inputLocalLogout, inputDestroySession, inputCentralLogout)
-          context.sessionStorage.getSessionValue(context.sessionId, Pac4jConstants.USER_PROFILES) shouldBe empty
+          context.sessionStorage.getSessionValue(context.getOrCreateSessionId(), Pac4jConstants.USER_PROFILES) shouldBe empty
 
           response
         }
