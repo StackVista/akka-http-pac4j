@@ -17,6 +17,7 @@ import akka.http.scaladsl.model.headers.Location
 
 class AkkaHttpWebContextTest extends AnyWordSpecLike with Matchers {
   lazy val cookie = ("cookieName", "cookieValue")
+  val uuidRegex = "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
 
   "AkkaHttpWebContext" should {
     "get/set request cookies" in withContext(cookies = List(Cookie("cookieName", "cookieValue"))) { webContext =>
@@ -216,7 +217,6 @@ class AkkaHttpWebContextTest extends AnyWordSpecLike with Matchers {
     }
 
     "getOrCreateSessionId return a valid SessionId if none is defined" in withContext() { webContext =>
-      val uuidRegex = "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
       webContext.getOrCreateSessionId().matches(uuidRegex) shouldBe true
     }
 
@@ -228,20 +228,18 @@ class AkkaHttpWebContextTest extends AnyWordSpecLike with Matchers {
         override def sessionExists(sessionKey: SessionKey): Boolean = true
       }
     ) { webContext =>
-      val uuidRegex = "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
       webContext.getOrCreateSessionId().matches(uuidRegex) shouldBe true
     }
 
-    "getOrCreateSessionId returns the defined " in withContext(
-      cookies = List(Cookie(AkkaHttpWebContext.DEFAULT_COOKIE_NAME, "")),
+    "getOrCreateSessionId return the defined sessionId if its valid" in withContext(
+      cookies = List(Cookie(AkkaHttpWebContext.DEFAULT_COOKIE_NAME, "validId")),
       sessionStorage = new ForgetfulSessionStorage {
         override val sessionLifetime = 3.seconds
 
         override def sessionExists(sessionKey: SessionKey): Boolean = true
       }
     ) { webContext =>
-      val uuidRegex = "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
-      webContext.getOrCreateSessionId().matches(uuidRegex) shouldBe true
+      webContext.getOrCreateSessionId() shouldBe "validId"
     }
 
     "addResponseSessionCookie with empty session returns an expired cookie" in withContext(
