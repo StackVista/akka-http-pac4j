@@ -39,6 +39,7 @@ class AkkaHttpWebContext(val request: HttpRequest,
   private var sessionId: Option[String] = request.cookies
     .find(_.name == sessionCookieName)
     .map(_.value)
+    .filter(_.nonEmpty)
 
   def getOrCreateSessionId(): String = {
     val newSession =
@@ -160,14 +161,16 @@ class AkkaHttpWebContext(val request: HttpRequest,
   def getChanges: ResponseChanges = changes
 
   def addResponseSessionCookie(): Unit = {
-    getSessionId.foreach { sessionId =>
-      val cookie = new Cookie(sessionCookieName, sessionId)
-      cookie.setSecure(isSecure)
+    val cookie = new Cookie(sessionCookieName, "")
+    cookie.setMaxAge(0)
+    getSessionId.foreach { value =>
+      cookie.setValue(value)
       cookie.setMaxAge(sessionStorage.sessionLifetime.toSeconds.toInt)
-      cookie.setHttpOnly(true)
-      cookie.setPath("/")
-      addResponseCookie(cookie)
     }
+    cookie.setSecure(isSecure)
+    cookie.setHttpOnly(true)
+    cookie.setPath("/")
+    addResponseCookie(cookie)
   }
 
   def sessionCookieIsValid(): Boolean = {

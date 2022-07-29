@@ -11,6 +11,19 @@ import java.util.Optional
 import scala.concurrent.duration._
 
 class AkkaHttpSessionStoreTest extends AnyWordSpecLike with Matchers with ScalatestRouteTest {
+  "AkkaHttpSessionStore.get" should {
+    "return the None if nothing exists in the store" in {
+      val context = new AkkaHttpWebContext(HttpRequest(), Seq.empty, new ForgetfulSessionStorage, AkkaHttpWebContext.DEFAULT_COOKIE_NAME)
+      new AkkaHttpSessionStore().getSessionId(context) shouldBe None
+    }
+
+    "return an existing session if one exist" in {
+      val context = new AkkaHttpWebContext(HttpRequest(), Seq.empty, new InMemorySessionStorage(30.minutes), AkkaHttpWebContext.DEFAULT_COOKIE_NAME)
+      context.trackSession("foo")
+      new AkkaHttpSessionStore().getSessionId(context) shouldBe Some("foo")
+    }
+  }
+
   "AkkaHttpSessionStore.getOrCreateSessionId" should {
     "return a valid session if one doesn't exist" in {
       val uuidRegex = "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
@@ -62,13 +75,20 @@ class AkkaHttpSessionStoreTest extends AnyWordSpecLike with Matchers with Scalat
   }
 
   "AkkaHttpSessionStore.renewSession" should {
-    "result in a non-empty session" in {
+    "result in a non-empty session if a session exists" in {
       val context = new AkkaHttpWebContext(HttpRequest(), Seq.empty, new InMemorySessionStorage(30.minutes), AkkaHttpWebContext.DEFAULT_COOKIE_NAME)
       val sessionStore = new AkkaHttpSessionStore()
       sessionStore.set(context, "mykey", "bar")
       sessionStore.renewSession(context)
       sessionStore.get(context, "mykey") should not be Optional.of("invalid")
       sessionStore.get(context, "mykey") shouldBe Optional.of("bar")
+    }
+
+    "result in a empty session if a session doesn't exists" in {
+      val context = new AkkaHttpWebContext(HttpRequest(), Seq.empty, new InMemorySessionStorage(30.minutes), AkkaHttpWebContext.DEFAULT_COOKIE_NAME)
+      val sessionStore = new AkkaHttpSessionStore()
+      sessionStore.renewSession(context)
+      sessionStore.get(context, "mykey") shouldBe Optional.empty()
     }
   }
 }

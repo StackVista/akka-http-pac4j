@@ -6,6 +6,8 @@ import com.stackstate.pac4j.AkkaHttpWebContext
 import org.pac4j.core.context.session.SessionStore
 
 class AkkaHttpSessionStore() extends SessionStore[AkkaHttpWebContext] {
+  def getSessionId(context: AkkaHttpWebContext): Option[String] = context.getSessionId
+
   override def getOrCreateSessionId(context: AkkaHttpWebContext): String = context.getOrCreateSessionId()
 
   override def get(context: AkkaHttpWebContext, key: String): Optional[Object] =
@@ -26,10 +28,9 @@ class AkkaHttpSessionStore() extends SessionStore[AkkaHttpWebContext] {
 
   override def buildFromTrackableSession(context: AkkaHttpWebContext, trackableSession: scala.Any): Optional[SessionStore[AkkaHttpWebContext]] = {
     trackableSession match {
-      case session: String => {
+      case session: String if session.nonEmpty =>
         context.trackSession(session)
         Optional.of(this)
-      }
 
       case _ =>
         Optional.empty()
@@ -37,13 +38,12 @@ class AkkaHttpSessionStore() extends SessionStore[AkkaHttpWebContext] {
   }
 
   override def renewSession(context: AkkaHttpWebContext): Boolean = {
-    val sessionId = getOrCreateSessionId(context)
-    val sessionValues = context.sessionStorage.getSessionValues(sessionId)
-    destroySession(context)
-
-    val newSessionId = getOrCreateSessionId(context)
-    sessionValues.foreach(context.sessionStorage.setSessionValues(newSessionId, _))
-
+    getSessionId(context).foreach { sessionId =>
+      val sessionValues = context.sessionStorage.getSessionValues(sessionId)
+      destroySession(context)
+      val newSessionId = getOrCreateSessionId(context)
+      sessionValues.foreach(context.sessionStorage.setSessionValues(newSessionId, _))
+    }
     true
   }
 }
