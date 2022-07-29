@@ -17,6 +17,7 @@ import akka.http.scaladsl.model.headers.Location
 
 class AkkaHttpWebContextTest extends AnyWordSpecLike with Matchers {
   lazy val cookie = ("cookieName", "cookieValue")
+  val uuidRegex = "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
 
   "AkkaHttpWebContext" should {
     "get/set request cookies" in withContext(cookies = List(Cookie("cookieName", "cookieValue"))) { webContext =>
@@ -205,6 +206,7 @@ class AkkaHttpWebContextTest extends AnyWordSpecLike with Matchers {
       cookies = List(Cookie(AkkaHttpWebContext.DEFAULT_COOKIE_NAME, "my_session")),
       sessionStorage = new ForgetfulSessionStorage {
         override val sessionLifetime = 3.seconds
+
         override def renewSession(session: SessionKey): Boolean = true
 
         override def sessionExists(sessionKey: SessionKey): Boolean = true
@@ -212,6 +214,57 @@ class AkkaHttpWebContextTest extends AnyWordSpecLike with Matchers {
     ) { webContext =>
       webContext.trackSession("my_session2")
       webContext.getOrCreateSessionId() shouldBe "my_session2"
+    }
+
+    "getOrCreateSessionId return a valid SessionId if none is defined" in withContext() { webContext =>
+      webContext.getOrCreateSessionId().matches(uuidRegex) shouldBe true
+    }
+
+    "getOrCreateSessionId return a valid SessionId if an empty string is defined" in withContext(
+      cookies = List(Cookie(AkkaHttpWebContext.DEFAULT_COOKIE_NAME, "")),
+      sessionStorage = new ForgetfulSessionStorage {
+        override val sessionLifetime = 3.seconds
+
+        override def sessionExists(sessionKey: SessionKey): Boolean = true
+      }
+    ) { webContext =>
+      webContext.getOrCreateSessionId().matches(uuidRegex) shouldBe true
+    }
+
+    "getOrCreateSessionId return the defined sessionId if its valid" in withContext(
+      cookies = List(Cookie(AkkaHttpWebContext.DEFAULT_COOKIE_NAME, "validId")),
+      sessionStorage = new ForgetfulSessionStorage {
+        override val sessionLifetime = 3.seconds
+
+        override def sessionExists(sessionKey: SessionKey): Boolean = true
+      }
+    ) { webContext =>
+      webContext.getOrCreateSessionId() shouldBe "validId"
+    }
+
+    "addResponseSessionCookie with empty session returns an expired cookie" in withContext(
+      sessionStorage = new ForgetfulSessionStorage {
+        override def sessionExists(sessionKey: SessionKey): Boolean = true
+      }
+    ) { webContext =>
+      val immediatelyExpireCookie: HttpCookie = HttpCookie.apply(name = AkkaHttpWebContext.DEFAULT_COOKIE_NAME, value = "", maxAge = Some(0), path = Some("/"), httpOnly = true)
+      webContext.addResponseSessionCookie()
+
+      webContext.getChanges.cookies shouldBe List(immediatelyExpireCookie)
+    }
+
+    "addResponseSessionCookie with a non-empty session returns a valid cookie" in withContext(
+      cookies = List(Cookie(AkkaHttpWebContext.DEFAULT_COOKIE_NAME, "validId")),
+      sessionStorage = new ForgetfulSessionStorage {
+        override val sessionLifetime = 3.seconds
+
+        override def sessionExists(sessionKey: SessionKey): Boolean = true
+      }
+    ) { webContext =>
+      val validCookie: HttpCookie = HttpCookie.apply(name = AkkaHttpWebContext.DEFAULT_COOKIE_NAME, value = "validId", maxAge = Some(3), path = Some("/"), httpOnly = true)
+      webContext.addResponseSessionCookie()
+
+      webContext.getChanges.cookies shouldBe List(validCookie)
     }
   }
 
