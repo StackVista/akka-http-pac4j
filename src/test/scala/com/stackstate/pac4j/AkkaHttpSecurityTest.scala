@@ -264,6 +264,72 @@ class AkkaHttpSecurityTest extends AnyWordSpecLike with Matchers with ScalatestR
         responseAs[String] shouldBe "called!"
       }
     }
+
+
+    "run the callbackLogic should not send back a sessionId if the set csrf cookie is false" in {
+      val config = new Config()
+      val existingContext = AkkaHttpWebContext(HttpRequest(), Seq.empty, new ForgetfulSessionStorage, AkkaHttpWebContext.DEFAULT_COOKIE_NAME)
+
+      val actionAdapter = new HttpActionAdapter[HttpResponse, AkkaHttpWebContext] {
+        override def adapt(code: HttpAction, context: AkkaHttpWebContext): HttpResponse = ???
+      }
+      config.setHttpActionAdapter(actionAdapter)
+      config.setCallbackLogic(new AkkaHttpCallbackLogic {
+        override def perform(context: AkkaHttpWebContext,
+                             config: Config,
+                             httpActionAdapter: HttpActionAdapter[Future[RouteResult], AkkaHttpWebContext],
+                             defaultUrl: String,
+                             saveInSession: lang.Boolean,
+                             multiProfile: lang.Boolean,
+                             renewSession: lang.Boolean,
+                             client: String): Future[RouteResult] = {
+          Future.successful(Complete(HttpResponse(StatusCodes.OK, entity = "called!")))
+        }
+      })
+
+      val akkaHttpSecurity = new AkkaHttpSecurity(config, new ForgetfulSessionStorage)
+
+      Get("/") ~> akkaHttpSecurity
+        .callback("/blaat", saveInSession = false, multiProfile = false, Some("Yooo"), existingContext = Some(existingContext), setCsrfCookie = false) ~> check {
+        // Session Store is empty so `addResponseSessionCookie` will create a token that will expire immediately
+        header("Set-Cookie").get.value().contains("AkkaHttpPac4jSession=; Max-Age=0;") shouldBe true
+
+      }
+    }
+
+    "run the callbackLogic should send back a sessionId if the csrf cookie is true" in {
+      val config = new Config()
+      val existingContext = AkkaHttpWebContext(HttpRequest(), Seq.empty, new InMemorySessionStorage(3.minutes), AkkaHttpWebContext.DEFAULT_COOKIE_NAME)
+
+      val actionAdapter = new HttpActionAdapter[HttpResponse, AkkaHttpWebContext] {
+        override def adapt(code: HttpAction, context: AkkaHttpWebContext): HttpResponse = ???
+      }
+      config.setHttpActionAdapter(actionAdapter)
+      config.setCallbackLogic(new AkkaHttpCallbackLogic {
+        override def perform(context: AkkaHttpWebContext,
+                             config: Config,
+                             httpActionAdapter: HttpActionAdapter[Future[RouteResult], AkkaHttpWebContext],
+                             defaultUrl: String,
+                             saveInSession: lang.Boolean,
+                             multiProfile: lang.Boolean,
+                             renewSession: lang.Boolean,
+                             client: String): Future[RouteResult] = {
+          Future.successful(Complete(HttpResponse(StatusCodes.OK, entity = "called!")))
+        }
+      })
+
+      val akkaHttpSecurity = new AkkaHttpSecurity(config, new InMemorySessionStorage(3.minutes))
+      Get("/") ~> akkaHttpSecurity
+        .callback("/blaat", saveInSession = false, multiProfile = false, Some("Yooo"), existingContext = Some(existingContext), setCsrfCookie = true) ~> check {
+        headers.size shouldBe 2
+        val localHeaders: Seq[HttpHeader] = headers
+        val threeMinutesInSeconds = 180
+        // When `addResponseCsrfCookie` is called the method `getOrCreateSessionId` is called which creates a Session
+        // when `addResponseSessionCookie` is called there is already a session so a cookie with value is added.
+        localHeaders.find(_.value().contains("pac4jCsrfToken")).get.value().contains(s"Max-Age=$threeMinutesInSeconds;") shouldBe true
+        localHeaders.find(_.value().contains("AkkaHttpPac4jSession")).get.value().contains(s"Max-Age=$threeMinutesInSeconds;") shouldBe true
+      }
+    }
   }
 
   "AkkaHttpSecurity.authorize" should {

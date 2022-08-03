@@ -180,8 +180,8 @@ class AkkaHttpSecurity(config: Config, sessionStorage: SessionStorage, val sessi
         _ =>
           callbackLogic.perform(akkaWebContext, config, actionAdapter, defaultUrl, saveInSession, multiProfile, true, defaultClient.orNull).map {
             result =>
-              akkaWebContext.addResponseSessionCookie()
               if (setCsrfCookie) akkaWebContext.addResponseCsrfCookie()
+              akkaWebContext.addResponseSessionCookie()
               result
           }
       }
