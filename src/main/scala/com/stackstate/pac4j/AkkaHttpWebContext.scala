@@ -40,6 +40,7 @@ class AkkaHttpWebContext(val request: HttpRequest,
     .find(_.name == sessionCookieName)
     .map(_.value)
     .filter(_.nonEmpty)
+    .find(session => sessionStorage.sessionExists(session))
 
   def getOrCreateSessionId(): String = {
     val newSession =

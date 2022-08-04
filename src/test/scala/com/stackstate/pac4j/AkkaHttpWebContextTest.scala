@@ -266,6 +266,28 @@ class AkkaHttpWebContextTest extends AnyWordSpecLike with Matchers {
 
       webContext.getChanges.cookies shouldBe List(validCookie)
     }
+
+    "when getSessionId is called and the session exists in the store should return it" in withContext(
+      cookies = List(Cookie(AkkaHttpWebContext.DEFAULT_COOKIE_NAME, "validId")),
+      sessionStorage = new ForgetfulSessionStorage {
+        override val sessionLifetime = 3.seconds
+
+        override def sessionExists(sessionKey: SessionKey): Boolean = true
+      }
+    ) { webContext =>
+      webContext.getSessionId shouldBe Some("validId")
+    }
+
+    "when getSessionId is called and the session doesn't exists in the store should return None" in withContext(
+      cookies = List(Cookie(AkkaHttpWebContext.DEFAULT_COOKIE_NAME, "notValidAnyMore")),
+      sessionStorage = new ForgetfulSessionStorage {
+        override val sessionLifetime = 3.seconds
+
+        override def sessionExists(sessionKey: SessionKey): Boolean = false
+      }
+    ) { webContext =>
+      webContext.getSessionId shouldBe None
+    }
   }
 
   def withContext(requestHeaders: List[(String, String)] = List.empty,
