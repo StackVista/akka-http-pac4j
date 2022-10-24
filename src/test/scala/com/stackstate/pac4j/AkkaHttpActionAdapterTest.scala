@@ -9,12 +9,22 @@ import akka.util.ByteString
 import com.stackstate.pac4j.AkkaHttpActionAdapterTest.ActionInt
 import com.stackstate.pac4j.http.AkkaHttpActionAdapter
 import com.stackstate.pac4j.store.ForgetfulSessionStorage
-import org.pac4j.core.exception.http.{BadRequestAction, ForbiddenAction, FoundAction, HttpAction, NoContentAction, OkAction, StatusAction, UnauthorizedAction}
+import org.pac4j.core.exception.http.{
+  BadRequestAction,
+  ForbiddenAction,
+  FoundAction,
+  HttpAction,
+  NoContentAction,
+  OkAction,
+  StatusAction,
+  UnauthorizedAction
+}
 import org.scalatest.concurrent.ScalaFutures
 
 class AkkaHttpActionAdapterTest extends AnyWordSpecLike with Matchers with ScalaFutures {
 
-  lazy val immediatelyExpireCookie: HttpCookie = HttpCookie.apply(name = AkkaHttpWebContext.DEFAULT_COOKIE_NAME, value = "", maxAge = Some(0), path = Some("/"), httpOnly = true)
+  lazy val immediatelyExpireCookie: HttpCookie =
+    HttpCookie.apply(name = AkkaHttpWebContext.DEFAULT_COOKIE_NAME, value = "", maxAge = Some(0), path = Some("/"), httpOnly = true)
 
   "AkkaHttpActionAdapter" should {
     "convert 200 to OK" in withContext { context =>

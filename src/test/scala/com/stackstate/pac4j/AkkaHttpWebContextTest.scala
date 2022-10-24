@@ -132,8 +132,7 @@ class AkkaHttpWebContextTest extends AnyWordSpecLike with Matchers {
       webContext.getChanges.cookies.find(_.name == AkkaHttpWebContext.DEFAULT_COOKIE_NAME) shouldBe None
     }
 
-    "don't add a cookie when the session is empty" in withContext(sessionStorage = new ForgetfulSessionStorage {
-    }) { webContext =>
+    "don't add a cookie when the session is empty" in withContext(sessionStorage = new ForgetfulSessionStorage {}) { webContext =>
       webContext.getChanges.cookies.find(_.name == AkkaHttpWebContext.DEFAULT_COOKIE_NAME) shouldBe None
     }
 
@@ -242,12 +241,11 @@ class AkkaHttpWebContextTest extends AnyWordSpecLike with Matchers {
       webContext.getOrCreateSessionId() shouldBe "validId"
     }
 
-    "addResponseSessionCookie with empty session returns an expired cookie" in withContext(
-      sessionStorage = new ForgetfulSessionStorage {
-        override def sessionExists(sessionKey: SessionKey): Boolean = true
-      }
-    ) { webContext =>
-      val immediatelyExpireCookie: HttpCookie = HttpCookie.apply(name = AkkaHttpWebContext.DEFAULT_COOKIE_NAME, value = "", maxAge = Some(0), path = Some("/"), httpOnly = true)
+    "addResponseSessionCookie with empty session returns an expired cookie" in withContext(sessionStorage = new ForgetfulSessionStorage {
+      override def sessionExists(sessionKey: SessionKey): Boolean = true
+    }) { webContext =>
+      val immediatelyExpireCookie: HttpCookie =
+        HttpCookie.apply(name = AkkaHttpWebContext.DEFAULT_COOKIE_NAME, value = "", maxAge = Some(0), path = Some("/"), httpOnly = true)
       webContext.addResponseSessionCookie()
 
       webContext.getChanges.cookies shouldBe List(immediatelyExpireCookie)
@@ -261,7 +259,8 @@ class AkkaHttpWebContextTest extends AnyWordSpecLike with Matchers {
         override def sessionExists(sessionKey: SessionKey): Boolean = true
       }
     ) { webContext =>
-      val validCookie: HttpCookie = HttpCookie.apply(name = AkkaHttpWebContext.DEFAULT_COOKIE_NAME, value = "validId", maxAge = Some(3), path = Some("/"), httpOnly = true)
+      val validCookie: HttpCookie =
+        HttpCookie.apply(name = AkkaHttpWebContext.DEFAULT_COOKIE_NAME, value = "validId", maxAge = Some(3), path = Some("/"), httpOnly = true)
       webContext.addResponseSessionCookie()
 
       webContext.getChanges.cookies shouldBe List(validCookie)

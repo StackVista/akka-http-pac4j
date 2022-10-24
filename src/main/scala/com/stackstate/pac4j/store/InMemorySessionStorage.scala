@@ -36,8 +36,8 @@ class InMemorySessionStorage(override val sessionLifetime: FiniteDuration) exten
       sessionData.get(sessionKey) match {
         case None =>
           val sessionTime = getTime
-          expiryQueue = expiryQueue + ExpiryRecord (sessionTime, sessionKey)
-          sessionData = sessionData + (sessionKey -> DataRecord(sessionTime, Map.empty) )
+          expiryQueue = expiryQueue + ExpiryRecord(sessionTime, sessionKey)
+          sessionData = sessionData + (sessionKey -> DataRecord(sessionTime, Map.empty))
           true
         case Some(_) => false
       }

@@ -29,7 +29,6 @@ object CsrfCookieAuthorizer {
     context
   }
 
-
   def createCookie(token: String, maxAge: Option[FiniteDuration]) = {
     val cookie = new Cookie(Pac4jConstants.CSRF_TOKEN, token)
     cookie.setPath(CookiePath)
