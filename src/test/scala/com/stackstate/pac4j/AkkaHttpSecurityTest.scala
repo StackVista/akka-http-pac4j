@@ -103,11 +103,12 @@ class AkkaHttpSecurityTest extends AnyWordSpecLike with Matchers with ScalatestR
 
       val akkaHttpSecurity = new AkkaHttpSecurity(config, new ForgetfulSessionStorage)
       val route =
-        akkaHttpSecurity.withAuthentication() { authenticated => {
-          authenticated.profiles.size shouldBe 1
-          authenticated.profiles.head shouldBe profile
-          complete("called!")
-        }
+        akkaHttpSecurity.withAuthentication() { authenticated =>
+          {
+            authenticated.profiles.size shouldBe 1
+            authenticated.profiles.head shouldBe profile
+            complete("called!")
+          }
         }
 
       Get("/") ~> route ~> check {
@@ -266,7 +267,6 @@ class AkkaHttpSecurityTest extends AnyWordSpecLike with Matchers with ScalatestR
       }
     }
 
-
     "run the callbackLogic should not send back a sessionId if the set csrf cookie is false" in {
       val config = new Config()
       val existingContext = AkkaHttpWebContext(HttpRequest(), Seq.empty, new ForgetfulSessionStorage, AkkaHttpWebContext.DEFAULT_COOKIE_NAME)
@@ -300,7 +300,12 @@ class AkkaHttpSecurityTest extends AnyWordSpecLike with Matchers with ScalatestR
 
     "run the callbackLogic should send back a sessionId if the csrf cookie is true" in {
       val config = new Config()
-      val existingContext = AkkaHttpWebContext(HttpRequest(uri = "http://test.com"), Seq.empty, new InMemorySessionStorage(3.minutes), AkkaHttpWebContext.DEFAULT_COOKIE_NAME)
+      val existingContext = AkkaHttpWebContext(
+        HttpRequest(uri = "http://test.com"),
+        Seq.empty,
+        new InMemorySessionStorage(3.minutes),
+        AkkaHttpWebContext.DEFAULT_COOKIE_NAME
+      )
 
       val actionAdapter = new HttpActionAdapter[HttpResponse, AkkaHttpWebContext] {
         override def adapt(code: HttpAction, context: AkkaHttpWebContext): HttpResponse = ???
@@ -329,7 +334,9 @@ class AkkaHttpSecurityTest extends AnyWordSpecLike with Matchers with ScalatestR
         localHeaders.find(_.value().contains("pac4jCsrfToken")).get.value().contains(s"Max-Age=$threeMinutesInSeconds;") shouldBe true
         localHeaders.find(_.value().contains("AkkaHttpPac4jSession")).get.value().contains(s"Max-Age=$threeMinutesInSeconds;") shouldBe true
 
-        val csrfCookies: Seq[HttpCookie] = localHeaders.collect { case setCookie: `Set-Cookie` if setCookie.cookie.name() == "pac4jCsrfToken" => setCookie.cookie }
+        val csrfCookies: Seq[HttpCookie] = localHeaders.collect {
+          case setCookie: `Set-Cookie` if setCookie.cookie.name() == "pac4jCsrfToken" => setCookie.cookie
+        }
         // Previous version always added the two cookies. Current version doesn't need domain.
         // We add the two to keep it backwards compatible.
         csrfCookies.filter(_.domain.nonEmpty).size shouldBe 1

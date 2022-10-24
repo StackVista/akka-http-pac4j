@@ -21,7 +21,7 @@ class AkkaHttpWebContext(val request: HttpRequest,
                          val formFields: Seq[(String, String)],
                          private[pac4j] val sessionStorage: SessionStorage,
                          val sessionCookieName: String)
-  extends WebContext {
+    extends WebContext {
 
   import com.stackstate.pac4j.AkkaHttpWebContext._
 
@@ -190,11 +190,11 @@ object AkkaHttpWebContext {
     new AkkaHttpWebContext(request, formFields, sessionStorage, sessionCookieName)
 
   //This class is where all the HTTP response changes are stored so that they can later be applied to an HTTP Request
-  case class ResponseChanges private(headers: List[HttpHeader],
-                                     contentType: Option[ContentType],
-                                     content: String,
-                                     cookies: List[HttpCookie],
-                                     attributes: Map[String, AnyRef])
+  case class ResponseChanges private (headers: List[HttpHeader],
+                                      contentType: Option[ContentType],
+                                      content: String,
+                                      cookies: List[HttpCookie],
+                                      attributes: Map[String, AnyRef])
 
   object ResponseChanges {
     def empty: ResponseChanges = {
