@@ -4,7 +4,7 @@ object Dependencies {
   val scalacheckVersion = "1.14.3"
   val akkaHttpVersion = "10.2.0"
   val akkaStreamsVersion = "2.6.17"
-  val pac4jVersion = "4.5.0"
+  val pac4jVersion = "4.5.7"
   val scalaTestVersion = "3.2.2"
 
   lazy val scalacheck = "org.scalacheck" %% "scalacheck" % scalacheckVersion
