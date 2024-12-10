@@ -18,6 +18,8 @@ import org.pac4j.core.profile.UserProfile
 import akka.http.scaladsl.util.FastFuture._
 import akka.stream.Materializer
 import com.stackstate.pac4j.store.SessionStorage
+import org.pac4j.core.context.WebContext
+import org.pac4j.core.context.session.SessionStore
 import org.pac4j.core.matching.matcher.DefaultMatchers
 
 import scala.collection.JavaConverters._
@@ -26,12 +28,12 @@ import scala.collection.immutable
 import org.pac4j.core.util.Pac4jConstants
 
 object AkkaHttpSecurity {
-  type AkkaHttpSecurityLogic = SecurityLogic[Future[RouteResult], AkkaHttpWebContext]
-  type AkkaHttpCallbackLogic = CallbackLogic[Future[RouteResult], AkkaHttpWebContext]
-  type AkkaHttpLogoutLogic = LogoutLogic[Future[RouteResult], AkkaHttpWebContext]
+  type AkkaHttpSecurityLogic = SecurityLogic
+  type AkkaHttpCallbackLogic = CallbackLogic
+  type AkkaHttpLogoutLogic = LogoutLogic
 
-  def authorize(authorizer: Authorizer[UserProfile])(request: AuthenticatedRequest): Directive0 =
-    akkaHttpAuthorize(authorizer.isAuthorized(request.webContext, request.profiles.asJava))
+  def authorize(authorizer: Authorizer)(request: AuthenticatedRequest): Directive0 =
+    akkaHttpAuthorize(authorizer.isAuthorized(request.webContext, request.webContext.getSessionStore, request.profiles.asJava))
 
   private def applyHeadersAndCookiesToResponse(changes: ResponseChanges)(httpResponse: HttpResponse): HttpResponse = {
     val regularHeaders: List[HttpHeader] = changes.headers
@@ -80,29 +82,29 @@ class AkkaHttpSecurity(config: Config, sessionStorage: SessionStorage, val sessi
   @SuppressWarnings(Array("AsInstanceOf"))
   private[pac4j] val securityLogic: AkkaHttpSecurityLogic =
     Option(config.getSecurityLogic) match {
-      case Some(v) => v.asInstanceOf[AkkaHttpSecurityLogic]
-      case None => new DefaultSecurityLogic[Future[RouteResult], AkkaHttpWebContext]
+      case Some(v) => v
+      case None => new DefaultSecurityLogic
     }
 
   @SuppressWarnings(Array("AsInstanceOf"))
-  private[pac4j] val actionAdapter: HttpActionAdapter[Future[RouteResult], AkkaHttpWebContext] =
+  private[pac4j] val actionAdapter: HttpActionAdapter =
     Option(config.getHttpActionAdapter) match {
-      case Some(v) => v.asInstanceOf[HttpActionAdapter[Future[RouteResult], AkkaHttpWebContext]]
+      case Some(v) => v
       case None => AkkaHttpActionAdapter
     }
 
   @SuppressWarnings(Array("AsInstanceOf"))
-  private[pac4j] val callbackLogic: CallbackLogic[Future[RouteResult], AkkaHttpWebContext] =
+  private[pac4j] val callbackLogic: CallbackLogic =
     Option(config.getCallbackLogic) match {
       case Some(v) => v.asInstanceOf[AkkaHttpCallbackLogic]
-      case None => new DefaultCallbackLogic[Future[RouteResult], AkkaHttpWebContext]
+      case None => new DefaultCallbackLogic
     }
 
   @SuppressWarnings(Array("AsInstanceOf"))
-  private[pac4j] val logoutLogic: LogoutLogic[Future[RouteResult], AkkaHttpWebContext] =
+  private[pac4j] val logoutLogic: LogoutLogic =
     Option(config.getLogoutLogic) match {
       case Some(v) => v.asInstanceOf[AkkaHttpLogoutLogic]
-      case None => new DefaultLogoutLogic[Future[RouteResult], AkkaHttpWebContext]
+      case None => new DefaultLogoutLogic
     }
 
   /**
@@ -140,30 +142,30 @@ class AkkaHttpSecurity(config: Config, sessionStorage: SessionStorage, val sessi
     */
   @SuppressWarnings(Array("NullAssignment"))
   def withAuthentication(clients: String = null /* Default null, meaning all defined clients */,
-                         multiProfile: Boolean = true,
                          authorizers: String = ""): Directive1[AuthenticatedRequest] =
     withContext().flatMap { akkaWebContext =>
       Directive[Tuple1[AuthenticatedRequest]] { inner => ctx =>
         // TODO This is a hack to ensure that any underlying Futures are scheduled (and handled in case of errors) from here
         // TODO Fix this properly
         Future.successful({}).flatMap { _ =>
-          val securityAccessAdapter: SecurityGrantedAccessAdapter[Future[RouteResult], AkkaHttpWebContext] =
-            (context: AkkaHttpWebContext, profiles: util.Collection[UserProfile], _: AnyRef) => {
-              val authenticatedRequest = AuthenticatedRequest(context, profiles.asScala.toList)
+          val securityAccessAdapter: SecurityGrantedAccessAdapter =
+            (context: WebContext, _: SessionStore, profiles: util.Collection[UserProfile], _: AnyRef) => {
+              val authenticatedRequest = AuthenticatedRequest(context.asInstanceOf[AkkaHttpWebContext], profiles.asScala.toList)
               inner(Tuple1(authenticatedRequest))(ctx)
             }
 
           securityLogic
             .perform(
               akkaWebContext,
+              akkaWebContext.getSessionStore,
               config,
               securityAccessAdapter,
               actionAdapter,
               clients,
               authorizers,
               DefaultMatchers.SECURITYHEADERS,
-              multiProfile
             )
+            .asInstanceOf[Future[RouteResult]]
             .map { result =>
               result
             }
@@ -175,20 +177,20 @@ class AkkaHttpSecurity(config: Config, sessionStorage: SessionStorage, val sessi
     * Callback to finish the login process for indirect clients.
     */
   def callback(defaultUrl: String = Pac4jConstants.DEFAULT_URL_VALUE,
-               saveInSession: Boolean = true,
-               multiProfile: Boolean = true,
                defaultClient: Option[String] = None,
                enforceFormEncoding: Boolean = false,
                existingContext: Option[AkkaHttpWebContext] = None,
                setCsrfCookie: Boolean = true): Route =
     withFormParameters(enforceFormEncoding) { formParams =>
       withContext(existingContext, formParams) { akkaWebContext => _ =>
-        callbackLogic.perform(akkaWebContext, config, actionAdapter, defaultUrl, saveInSession, multiProfile, true, defaultClient.orNull).map {
-          result =>
+        callbackLogic
+          .perform(akkaWebContext, akkaWebContext.getSessionStore, config, actionAdapter, defaultUrl, true, defaultClient.orNull)
+          .asInstanceOf[Future[RouteResult]]
+          .map { result =>
             if (setCsrfCookie) akkaWebContext.addResponseCsrfCookie()
             akkaWebContext.addResponseSessionCookie()
             result
-        }
+          }
       }
     }
 
@@ -198,13 +200,25 @@ class AkkaHttpSecurity(config: Config, sessionStorage: SessionStorage, val sessi
              destroySession: Boolean = true,
              centralLogout: Boolean = false): Route = {
     withContext() { akkaWebContext => _ =>
-      logoutLogic.perform(akkaWebContext, config, actionAdapter, defaultUrl, logoutPatternUrl, localLogout, destroySession, centralLogout)
+      logoutLogic
+        .perform(
+          akkaWebContext,
+          akkaWebContext.getSessionStore,
+          config,
+          actionAdapter,
+          defaultUrl,
+          logoutPatternUrl,
+          localLogout,
+          destroySession,
+          centralLogout
+        )
+        .asInstanceOf[Future[RouteResult]]
     }
   }
 
-  def withAllClientsAuthentication(multiProfile: Boolean = true): Directive1[AuthenticatedRequest] = {
+  def withAllClientsAuthentication(): Directive1[AuthenticatedRequest] = {
     val authorizers = config.getAuthorizers.keySet().asScala.mkString(",")
     val clients = config.getClients.findAllClients().asScala.map(_.getName).mkString(",")
-    withAuthentication(clients, multiProfile, authorizers)
+    withAuthentication(clients, authorizers)
   }
 }
