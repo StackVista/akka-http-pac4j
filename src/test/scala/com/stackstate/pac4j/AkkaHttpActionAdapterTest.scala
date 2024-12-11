@@ -35,12 +35,12 @@ class AkkaHttpActionAdapterTest extends AnyWordSpecLike with Matchers with Scala
       )
     }
     "convert 401 to Unauthorized for direct clients" in withContext { context =>
-      AkkaHttpActionAdapter.adapt(UnauthorizedAction.INSTANCE, context).futureValue.response shouldEqual HttpResponse(Unauthorized)
+      AkkaHttpActionAdapter.adapt(new UnauthorizedAction, context).futureValue.response shouldEqual HttpResponse(Unauthorized)
       context.getChanges.cookies shouldBe List(immediatelyExpireCookie)
     }
     "convert 401 to Unauthorized for indirect clients" in withContext { context =>
       context.getSessionStore.set(context, "state", "foo")
-      AkkaHttpActionAdapter.adapt(UnauthorizedAction.INSTANCE, context).futureValue.response shouldEqual HttpResponse(Unauthorized)
+      AkkaHttpActionAdapter.adapt(new UnauthorizedAction, context).futureValue.response shouldEqual HttpResponse(Unauthorized)
       context.getChanges.cookies.map(_.name) shouldBe List(AkkaHttpWebContext.DEFAULT_COOKIE_NAME)
     }
     "convert 302 to SeeOther (to support login flow) (direct client)" in withContext { context =>
@@ -57,13 +57,13 @@ class AkkaHttpActionAdapterTest extends AnyWordSpecLike with Matchers with Scala
       context.getChanges.cookies.map(_.name) shouldBe List(AkkaHttpWebContext.DEFAULT_COOKIE_NAME)
     }
     "convert 400 to BadRequest" in withContext { context =>
-      AkkaHttpActionAdapter.adapt(BadRequestAction.INSTANCE, context).futureValue.response shouldEqual HttpResponse(BadRequest)
+      AkkaHttpActionAdapter.adapt(new BadRequestAction, context).futureValue.response shouldEqual HttpResponse(BadRequest)
     }
     "convert 201 to Created" in withContext { context =>
       AkkaHttpActionAdapter.adapt(201.action(), context).futureValue.response shouldEqual HttpResponse(Created)
     }
     "convert 403 to Forbidden" in withContext { context =>
-      AkkaHttpActionAdapter.adapt(ForbiddenAction.INSTANCE, context).futureValue.response shouldEqual HttpResponse(Forbidden)
+      AkkaHttpActionAdapter.adapt(new ForbiddenAction, context).futureValue.response shouldEqual HttpResponse(Forbidden)
     }
     "convert 204 to NoContent" in withContext { context =>
       AkkaHttpActionAdapter.adapt(NoContentAction.INSTANCE, context).futureValue.response shouldEqual HttpResponse(NoContent)
