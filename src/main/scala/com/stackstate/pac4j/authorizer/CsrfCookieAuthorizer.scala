@@ -22,6 +22,9 @@ object CsrfCookieAuthorizer {
 
     context.setRequestAttribute(Pac4jConstants.CSRF_TOKEN, token)
     context.getSessionStore.set(context, Pac4jConstants.CSRF_TOKEN, token)
+    val csrfExpiration: AnyRef =
+      (System.currentTimeMillis() + maxAge.map(_.toMillis).getOrElse(0L)).asInstanceOf[Number].longValue().asInstanceOf[AnyRef]
+    context.getSessionStore.set(context, Pac4jConstants.CSRF_TOKEN_EXPIRATION_DATE, csrfExpiration)
 
     // previous versions set both cookies. This change is to keep it backwards compatible.
     context.addResponseCookie(cookieWithDomain)

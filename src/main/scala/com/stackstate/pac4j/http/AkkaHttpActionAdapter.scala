@@ -1,28 +1,19 @@
 package com.stackstate.pac4j.http
 
-import akka.http.scaladsl.model.{HttpEntity, HttpHeader, HttpResponse, StatusCodes, Uri}
-import org.pac4j.core.context.HttpConstants
-import org.pac4j.core.http.adapter.HttpActionAdapter
 import akka.http.scaladsl.model.StatusCodes._
 import akka.http.scaladsl.model.headers.Location
-import akka.http.scaladsl.server.RouteResult
+import akka.http.scaladsl.model._
 import akka.http.scaladsl.server.RouteResult.Complete
 import com.stackstate.pac4j.AkkaHttpWebContext
-import org.pac4j.core.exception.http.{
-  BadRequestAction,
-  ForbiddenAction,
-  FoundAction,
-  HttpAction,
-  NoContentAction,
-  OkAction,
-  SeeOtherAction,
-  UnauthorizedAction
-}
+import org.pac4j.core.context.{HttpConstants, WebContext}
+import org.pac4j.core.exception.http._
+import org.pac4j.core.http.adapter.HttpActionAdapter
 
 import scala.concurrent.Future
 
-object AkkaHttpActionAdapter extends HttpActionAdapter[Future[RouteResult], AkkaHttpWebContext] {
-  override def adapt(action: HttpAction, context: AkkaHttpWebContext): Future[Complete] = {
+object AkkaHttpActionAdapter extends HttpActionAdapter {
+  override def adapt(action: HttpAction, ctx: WebContext): Future[Complete] = {
+    val context = ctx.asInstanceOf[AkkaHttpWebContext]
     Future.successful(Complete(action match {
       case _: UnauthorizedAction =>
         // XHR requests don't receive a TEMP_REDIRECT but a UNAUTHORIZED. The client can handle this

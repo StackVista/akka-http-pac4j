@@ -93,7 +93,7 @@ class AkkaHttpWebContext(val request: HttpRequest,
     changes = changes.copy(cookies = changes.cookies ++ List(httpCookie))
   }
 
-  override lazy val getSessionStore = new AkkaHttpSessionStore()
+  lazy val getSessionStore = new AkkaHttpSessionStore()
 
   override def getRemoteAddr: String = {
     request.getUri().getHost.address()
@@ -182,6 +182,10 @@ class AkkaHttpWebContext(val request: HttpRequest,
   def addResponseCsrfCookie(): Unit = {
     CsrfCookieAuthorizer(this, Some(sessionStorage.sessionLifetime))
     ()
+  }
+
+  override def getResponseHeader(name: String): Optional[String] = {
+    changes.headers.find(_.name().toLowerCase() == name.toLowerCase).map(_.value).asJava
   }
 }
 

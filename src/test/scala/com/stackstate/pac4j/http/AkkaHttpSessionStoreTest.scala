@@ -14,13 +14,13 @@ class AkkaHttpSessionStoreTest extends AnyWordSpecLike with Matchers with Scalat
   "AkkaHttpSessionStore.get" should {
     "return the None if nothing exists in the store" in {
       val context = new AkkaHttpWebContext(HttpRequest(), Seq.empty, new ForgetfulSessionStorage, AkkaHttpWebContext.DEFAULT_COOKIE_NAME)
-      new AkkaHttpSessionStore().getSessionId(context) shouldBe None
+      new AkkaHttpSessionStore().getSessionId(context, createSession = false) shouldBe Optional.empty()
     }
 
     "return an existing session if one exist" in {
       val context = new AkkaHttpWebContext(HttpRequest(), Seq.empty, new InMemorySessionStorage(30.minutes), AkkaHttpWebContext.DEFAULT_COOKIE_NAME)
       context.trackSession("foo")
-      new AkkaHttpSessionStore().getSessionId(context) shouldBe Some("foo")
+      new AkkaHttpSessionStore().getSessionId(context, createSession = false) shouldBe Optional.of("foo")
     }
   }
 
@@ -28,13 +28,13 @@ class AkkaHttpSessionStoreTest extends AnyWordSpecLike with Matchers with Scalat
     "return a valid session if one doesn't exist" in {
       val uuidRegex = "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
       val context = new AkkaHttpWebContext(HttpRequest(), Seq.empty, new ForgetfulSessionStorage, AkkaHttpWebContext.DEFAULT_COOKIE_NAME)
-      new AkkaHttpSessionStore().getOrCreateSessionId(context).matches(uuidRegex) shouldBe true
+      new AkkaHttpSessionStore().getSessionId(context, createSession = true).get().matches(uuidRegex) shouldBe true
     }
 
     "return an existing session if one exist" in {
       val context = new AkkaHttpWebContext(HttpRequest(), Seq.empty, new InMemorySessionStorage(30.minutes), AkkaHttpWebContext.DEFAULT_COOKIE_NAME)
       context.trackSession("foo")
-      new AkkaHttpSessionStore().getOrCreateSessionId(context) shouldBe "foo"
+      new AkkaHttpSessionStore().getSessionId(context, createSession = false).get() shouldBe "foo"
     }
   }
 
