@@ -1,15 +1,20 @@
 import Dependencies._
 
 inThisBuild(
-  List(organization := "com.stackstate", scalaVersion := "2.12.13", crossScalaVersions := Seq(scalaVersion.value, "2.13.5"), libraryDependencies ++= {
-    // Silencer
-    val silencerVersion = "1.7.3"
+  List(
+    organization := "com.stackstate",
+    scalaVersion := "2.12.20",
+    crossScalaVersions := Seq(scalaVersion.value, "2.13.16"),
+    libraryDependencies ++= {
+      // Silencer
+      val silencerVersion = "1.7.19"
 
-    Seq(
-      compilerPlugin(("com.github.ghik" %% "silencer-plugin" % silencerVersion).cross(CrossVersion.full)),
-      ("com.github.ghik" %% "silencer-lib" % silencerVersion % Provided).cross(CrossVersion.full)
-    )
-  })
+      Seq(
+        compilerPlugin(("com.github.ghik" %% "silencer-plugin" % silencerVersion).cross(CrossVersion.full)),
+        ("com.github.ghik" %% "silencer-lib" % silencerVersion % Provided).cross(CrossVersion.full)
+      )
+    }
+  )
 )
 
 lazy val root = (project in file(".")).settings(
