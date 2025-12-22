@@ -1,35 +1,35 @@
 package com.stackstate.pac4j
 
 import java.util.{Optional, UUID}
-import akka.http.scaladsl.model.HttpHeader.ParsingResult.{Error, Ok}
-import akka.http.scaladsl.model.headers.HttpCookie
-import akka.http.scaladsl.model.{ContentType, HttpHeader, HttpRequest}
+import org.apache.pekko.http.scaladsl.model.HttpHeader.ParsingResult.{Error, Ok}
+import org.apache.pekko.http.scaladsl.model.headers.HttpCookie
+import org.apache.pekko.http.scaladsl.model.{ContentType, HttpHeader, HttpRequest}
 import com.stackstate.pac4j.authorizer.CsrfCookieAuthorizer
-import com.stackstate.pac4j.http.AkkaHttpSessionStore
+import com.stackstate.pac4j.http.PekkoHttpSessionStore
 import com.stackstate.pac4j.store.SessionStorage
 import org.pac4j.core.context.{Cookie, WebContext}
 
-import compat.java8.OptionConverters._
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
+import scala.jdk.OptionConverters._
 
 /**
-  * The AkkaHttpWebContext is responsible for wrapping an HTTP request
+  * The PekkoHttpWebContext is responsible for wrapping an HTTP request
   * and stores changes that are produced by pac4j
   * and need to be applied to an HTTP response.
   */
-class AkkaHttpWebContext(val request: HttpRequest,
+class PekkoHttpWebContext(val request: HttpRequest,
                          val formFields: Seq[(String, String)],
                          private[pac4j] val sessionStorage: SessionStorage,
                          val sessionCookieName: String)
     extends WebContext {
 
-  import com.stackstate.pac4j.AkkaHttpWebContext._
+  import com.stackstate.pac4j.PekkoHttpWebContext._
 
   private var changes = ResponseChanges.empty
 
   //Only compute the request cookies once
-  private lazy val requestCookies = request.cookies.map { akkaCookie =>
-    new Cookie(akkaCookie.name, akkaCookie.value)
+  private lazy val requestCookies = request.cookies.map { pekkoCookie =>
+    new Cookie(pekkoCookie.name, pekkoCookie.value)
   }.asJavaCollection
 
   //Request parameters are composed of form fields and the query part of the uri. Stored in a lazy val in order to only compute it once
@@ -74,7 +74,7 @@ class AkkaHttpWebContext(val request: HttpRequest,
 
   override def getRequestCookies: java.util.Collection[Cookie] = requestCookies
 
-  private def toAkkaHttpCookie(cookie: Cookie): HttpCookie = {
+  private def toPekkoHttpCookie(cookie: Cookie): HttpCookie = {
     HttpCookie(
       name = cookie.getName,
       value = cookie.getValue,
@@ -89,11 +89,11 @@ class AkkaHttpWebContext(val request: HttpRequest,
   }
 
   override def addResponseCookie(cookie: Cookie): Unit = {
-    val httpCookie = toAkkaHttpCookie(cookie)
+    val httpCookie = toPekkoHttpCookie(cookie)
     changes = changes.copy(cookies = changes.cookies ++ List(httpCookie))
   }
 
-  lazy val getSessionStore = new AkkaHttpSessionStore()
+  lazy val getSessionStore = new PekkoHttpSessionStore()
 
   override def getRemoteAddr: String = {
     request.getUri().getHost.address()
@@ -109,9 +109,8 @@ class AkkaHttpWebContext(val request: HttpRequest,
     changes = changes.copy(headers = header :: changes.headers.filter(_.name != name))
   }
 
-  @com.github.ghik.silencer.silent("mapValues")
   override def getRequestParameters: java.util.Map[String, Array[String]] =
-    requestParameters.mapValues(Array(_)).toMap.asJava
+    requestParameters.view.mapValues(Array(_)).toMap.asJava
 
   override def getFullRequestURL: String = {
     request.getUri().toString
@@ -136,11 +135,11 @@ class AkkaHttpWebContext(val request: HttpRequest,
   }
 
   override def getRequestParameter(name: String): Optional[String] = {
-    requestParameters.get(name).asJava
+    requestParameters.get(name).toJava
   }
 
   override def getRequestHeader(name: String): Optional[String] = {
-    request.headers.find(_.name().toLowerCase() == name.toLowerCase).map(_.value).asJava
+    request.headers.find(_.name().toLowerCase() == name.toLowerCase).map(_.value).toJava
   }
 
   lazy val getScheme: String = request.getUri().getScheme
@@ -155,7 +154,7 @@ class AkkaHttpWebContext(val request: HttpRequest,
     changes = changes.copy(attributes = changes.attributes ++ Map[String, AnyRef](name -> value))
 
   override def getRequestAttribute(name: String): Optional[AnyRef] =
-    changes.attributes.get(name).asJava
+    changes.attributes.get(name).toJava
 
   def getContentType: Option[ContentType] = changes.contentType
 
@@ -185,13 +184,13 @@ class AkkaHttpWebContext(val request: HttpRequest,
   }
 
   override def getResponseHeader(name: String): Optional[String] = {
-    changes.headers.find(_.name().toLowerCase() == name.toLowerCase).map(_.value).asJava
+    changes.headers.find(_.name().toLowerCase() == name.toLowerCase).map(_.value).toJava
   }
 }
 
-object AkkaHttpWebContext {
-  def apply(request: HttpRequest, formFields: Seq[(String, String)], sessionStorage: SessionStorage, sessionCookieName: String): AkkaHttpWebContext =
-    new AkkaHttpWebContext(request, formFields, sessionStorage, sessionCookieName)
+object PekkoHttpWebContext {
+  def apply(request: HttpRequest, formFields: Seq[(String, String)], sessionStorage: SessionStorage, sessionCookieName: String): PekkoHttpWebContext =
+    new PekkoHttpWebContext(request, formFields, sessionStorage, sessionCookieName)
 
   //This class is where all the HTTP response changes are stored so that they can later be applied to an HTTP Request
   case class ResponseChanges private (headers: List[HttpHeader],
@@ -206,5 +205,5 @@ object AkkaHttpWebContext {
     }
   }
 
-  private[pac4j] val DEFAULT_COOKIE_NAME = "AkkaHttpPac4jSession"
+  private[pac4j] val DEFAULT_COOKIE_NAME = "PekkoHttpPac4jSession"
 }

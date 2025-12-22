@@ -2,16 +2,17 @@ import sbt._
 
 object Dependencies {
   val scalacheckVersion = "1.14.3"
-  val akkaHttpVersion = "10.2.7"
-  val akkaStreamsVersion = "2.6.18"
+  val pekkoHttpVersion = "1.0.1"
+  val pekkoStreamsVersion = "1.0.3"
   val pac4jVersion = "5.7.7"
   val scalaTestVersion = "3.2.2"
 
   lazy val scalacheck = "org.scalacheck" %% "scalacheck" % scalacheckVersion
-  lazy val akkaHttp = "com.typesafe.akka" %% "akka-http" % akkaHttpVersion
-  lazy val akkaHttpTestKit = "com.typesafe.akka" %% "akka-http-testkit" % akkaHttpVersion
-  lazy val akkaStream = "com.typesafe.akka" %% "akka-stream" % akkaStreamsVersion
+  lazy val pekkoHttp = "org.apache.pekko" %% "pekko-http" % pekkoHttpVersion
+  lazy val pekkoHttpTestKit = "org.apache.pekko" %% "pekko-http-testkit" % pekkoHttpVersion
+  lazy val pekkoStream = "org.apache.pekko" %% "pekko-stream" % pekkoStreamsVersion
   lazy val pac4j = "org.pac4j" % "pac4j-core" % pac4jVersion
   lazy val scalaTestCore = "org.scalatest" %% "scalatest" % scalaTestVersion
-  lazy val akkaStreamTestKit = "com.typesafe.akka" %% "akka-stream-testkit" % akkaStreamsVersion
+  lazy val pekkoStreamTestKit = "org.apache.pekko" %% "pekko-stream-testkit" % pekkoStreamsVersion
+  lazy val scalaCompat = "org.scala-lang.modules" %% "scala-collection-compat" % "2.13.0"
 }

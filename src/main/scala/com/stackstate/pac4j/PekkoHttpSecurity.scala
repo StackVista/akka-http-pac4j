@@ -1,39 +1,39 @@
 package com.stackstate.pac4j
 
 import java.util
-import akka.http.scaladsl.common.StrictForm
-import akka.http.scaladsl.model.{HttpEntity, HttpHeader, HttpResponse}
-import akka.http.scaladsl.server.Directives.{authorize => akkaHttpAuthorize}
-import akka.http.scaladsl.server.{Directive, Directive0, Directive1, Route, RouteResult}
-import akka.http.scaladsl.model.headers._
-import akka.http.scaladsl.server.RouteResult.Complete
-import akka.http.scaladsl.unmarshalling.Unmarshal
-import com.stackstate.pac4j.AkkaHttpWebContext.ResponseChanges
-import com.stackstate.pac4j.http.AkkaHttpActionAdapter
+import org.apache.pekko.http.scaladsl.common.StrictForm
+import org.apache.pekko.http.scaladsl.model.{HttpEntity, HttpHeader, HttpResponse}
+import org.apache.pekko.http.scaladsl.server.Directives.{authorize => pekkoHttpAuthorize}
+import org.apache.pekko.http.scaladsl.server.{Directive, Directive0, Directive1, Route, RouteResult}
+import org.apache.pekko.http.scaladsl.model.headers._
+import org.apache.pekko.http.scaladsl.server.RouteResult.Complete
+import org.apache.pekko.http.scaladsl.unmarshalling.Unmarshal
+import com.stackstate.pac4j.PekkoHttpWebContext.ResponseChanges
+import com.stackstate.pac4j.http.PekkoHttpActionAdapter
 import org.pac4j.core.authorization.authorizer.Authorizer
 import org.pac4j.core.config.Config
 import org.pac4j.core.engine._
 import org.pac4j.core.http.adapter.HttpActionAdapter
 import org.pac4j.core.profile.UserProfile
-import akka.http.scaladsl.util.FastFuture._
-import akka.stream.Materializer
+import org.apache.pekko.http.scaladsl.util.FastFuture._
+import org.apache.pekko.stream.Materializer
 import com.stackstate.pac4j.store.SessionStorage
 import org.pac4j.core.context.WebContext
 import org.pac4j.core.context.session.SessionStore
 import org.pac4j.core.matching.matcher.DefaultMatchers
 
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.collection.immutable
 import org.pac4j.core.util.Pac4jConstants
 
-object AkkaHttpSecurity {
-  type AkkaHttpSecurityLogic = SecurityLogic
-  type AkkaHttpCallbackLogic = CallbackLogic
-  type AkkaHttpLogoutLogic = LogoutLogic
+object PekkoHttpSecurity {
+  type PekkoHttpSecurityLogic = SecurityLogic
+  type PekkoHttpCallbackLogic = CallbackLogic
+  type PekkoHttpLogoutLogic = LogoutLogic
 
   def authorize(authorizer: Authorizer)(request: AuthenticatedRequest): Directive0 =
-    akkaHttpAuthorize(authorizer.isAuthorized(request.webContext, request.webContext.getSessionStore, request.profiles.asJava))
+    pekkoHttpAuthorize(authorizer.isAuthorized(request.webContext, request.webContext.getSessionStore, request.profiles.asJava))
 
   private def applyHeadersAndCookiesToResponse(changes: ResponseChanges)(httpResponse: HttpResponse): HttpResponse = {
     val regularHeaders: List[HttpHeader] = changes.headers
@@ -44,7 +44,7 @@ object AkkaHttpSecurity {
   }
 
   /**
-    * Try to extract authentication credentials from form parameters using Akka's StrictForm unmarshallers.
+    * Try to extract authentication credentials from form parameters using Pekko's StrictForm unmarshallers.
     * If that fails, either form encoding is enforced, in which case the request fails, or the request proceeds.
     * If the request proceeds, other ways (e.g. basic auth) are assumed to be configured in pac4j in order to pass
     * credentials.
@@ -73,14 +73,14 @@ object AkkaHttpSecurity {
   }
 }
 
-class AkkaHttpSecurity(config: Config, sessionStorage: SessionStorage, val sessionCookieName: String = AkkaHttpWebContext.DEFAULT_COOKIE_NAME)(
+class PekkoHttpSecurity(config: Config, sessionStorage: SessionStorage, val sessionCookieName: String = PekkoHttpWebContext.DEFAULT_COOKIE_NAME)(
   implicit val executionContext: ExecutionContext
 ) {
 
-  import AkkaHttpSecurity._
+  import PekkoHttpSecurity._
 
   @SuppressWarnings(Array("AsInstanceOf"))
-  private[pac4j] val securityLogic: AkkaHttpSecurityLogic =
+  private[pac4j] val securityLogic: PekkoHttpSecurityLogic =
     Option(config.getSecurityLogic) match {
       case Some(v) => v
       case None => new DefaultSecurityLogic
@@ -90,31 +90,31 @@ class AkkaHttpSecurity(config: Config, sessionStorage: SessionStorage, val sessi
   private[pac4j] val actionAdapter: HttpActionAdapter =
     Option(config.getHttpActionAdapter) match {
       case Some(v) => v
-      case None => AkkaHttpActionAdapter
+      case None => PekkoHttpActionAdapter
     }
 
   @SuppressWarnings(Array("AsInstanceOf"))
   private[pac4j] val callbackLogic: CallbackLogic =
     Option(config.getCallbackLogic) match {
-      case Some(v) => v.asInstanceOf[AkkaHttpCallbackLogic]
+      case Some(v) => v.asInstanceOf[PekkoHttpCallbackLogic]
       case None => new DefaultCallbackLogic
     }
 
   @SuppressWarnings(Array("AsInstanceOf"))
   private[pac4j] val logoutLogic: LogoutLogic =
     Option(config.getLogoutLogic) match {
-      case Some(v) => v.asInstanceOf[AkkaHttpLogoutLogic]
+      case Some(v) => v.asInstanceOf[PekkoHttpLogoutLogic]
       case None => new DefaultLogoutLogic
     }
 
   /**
     * This directive constructs a pac4j context for a route. This means the request is interpreted into
-    * an AkkaHttpWebContext and any changes to this context are applied when the route returns (e.g. headers/cookies).
+    * an PekkoHttpWebContext and any changes to this context are applied when the route returns (e.g. headers/cookies).
     */
-  def withContext(existingContext: Option[AkkaHttpWebContext] = None, formParams: Map[String, String] = Map.empty): Directive1[AkkaHttpWebContext] =
-    Directive[Tuple1[AkkaHttpWebContext]] { inner => ctx =>
-      val akkaWebContext = existingContext.getOrElse(
-        new AkkaHttpWebContext(
+  def withContext(existingContext: Option[PekkoHttpWebContext] = None, formParams: Map[String, String] = Map.empty): Directive1[PekkoHttpWebContext] =
+    Directive[Tuple1[PekkoHttpWebContext]] { inner => ctx =>
+      val pekkoWebContext = existingContext.getOrElse(
+        new PekkoHttpWebContext(
           request = ctx.request,
           formFields = formParams.toSeq,
           sessionStorage = sessionStorage,
@@ -122,8 +122,8 @@ class AkkaHttpSecurity(config: Config, sessionStorage: SessionStorage, val sessi
         )
       )
 
-      inner(Tuple1(akkaWebContext))(ctx).map[RouteResult] {
-        case Complete(response) => Complete(applyHeadersAndCookiesToResponse(akkaWebContext.getChanges)(response))
+      inner(Tuple1(pekkoWebContext))(ctx).map[RouteResult] {
+        case Complete(response) => Complete(applyHeadersAndCookiesToResponse(pekkoWebContext.getChanges)(response))
         case rejection => rejection
       }
     }
@@ -143,21 +143,21 @@ class AkkaHttpSecurity(config: Config, sessionStorage: SessionStorage, val sessi
   @SuppressWarnings(Array("NullAssignment"))
   def withAuthentication(clients: String = null /* Default null, meaning all defined clients */,
                          authorizers: String = ""): Directive1[AuthenticatedRequest] =
-    withContext().flatMap { akkaWebContext =>
+    withContext().flatMap { pekkoWebContext =>
       Directive[Tuple1[AuthenticatedRequest]] { inner => ctx =>
         // TODO This is a hack to ensure that any underlying Futures are scheduled (and handled in case of errors) from here
         // TODO Fix this properly
         Future.successful({}).flatMap { _ =>
           val securityAccessAdapter: SecurityGrantedAccessAdapter =
             (context: WebContext, _: SessionStore, profiles: util.Collection[UserProfile], _: AnyRef) => {
-              val authenticatedRequest = AuthenticatedRequest(context.asInstanceOf[AkkaHttpWebContext], profiles.asScala.toList)
+              val authenticatedRequest = AuthenticatedRequest(context.asInstanceOf[PekkoHttpWebContext], profiles.asScala.toList)
               inner(Tuple1(authenticatedRequest))(ctx)
             }
 
           securityLogic
             .perform(
-              akkaWebContext,
-              akkaWebContext.getSessionStore,
+              pekkoWebContext,
+              pekkoWebContext.getSessionStore,
               config,
               securityAccessAdapter,
               actionAdapter,
@@ -179,16 +179,16 @@ class AkkaHttpSecurity(config: Config, sessionStorage: SessionStorage, val sessi
   def callback(defaultUrl: String = Pac4jConstants.DEFAULT_URL_VALUE,
                defaultClient: Option[String] = None,
                enforceFormEncoding: Boolean = false,
-               existingContext: Option[AkkaHttpWebContext] = None,
+               existingContext: Option[PekkoHttpWebContext] = None,
                setCsrfCookie: Boolean = true): Route =
     withFormParameters(enforceFormEncoding) { formParams =>
-      withContext(existingContext, formParams) { akkaWebContext => _ =>
+      withContext(existingContext, formParams) { pekkoWebContext => _ =>
         callbackLogic
-          .perform(akkaWebContext, akkaWebContext.getSessionStore, config, actionAdapter, defaultUrl, true, defaultClient.orNull)
+          .perform(pekkoWebContext, pekkoWebContext.getSessionStore, config, actionAdapter, defaultUrl, true, defaultClient.orNull)
           .asInstanceOf[Future[RouteResult]]
           .map { result =>
-            if (setCsrfCookie) akkaWebContext.addResponseCsrfCookie()
-            akkaWebContext.addResponseSessionCookie()
+            if (setCsrfCookie) pekkoWebContext.addResponseCsrfCookie()
+            pekkoWebContext.addResponseSessionCookie()
             result
           }
       }
@@ -199,11 +199,11 @@ class AkkaHttpSecurity(config: Config, sessionStorage: SessionStorage, val sessi
              localLogout: Boolean = true,
              destroySession: Boolean = true,
              centralLogout: Boolean = false): Route = {
-    withContext() { akkaWebContext => _ =>
+    withContext() { pekkoWebContext => _ =>
       logoutLogic
         .perform(
-          akkaWebContext,
-          akkaWebContext.getSessionStore,
+          pekkoWebContext,
+          pekkoWebContext.getSessionStore,
           config,
           actionAdapter,
           defaultUrl,

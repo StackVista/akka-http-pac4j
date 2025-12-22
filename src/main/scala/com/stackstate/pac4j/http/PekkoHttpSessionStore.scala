@@ -1,44 +1,44 @@
 package com.stackstate.pac4j.http
 
 import java.util.Optional
-import compat.java8.OptionConverters._
-import com.stackstate.pac4j.AkkaHttpWebContext
+import scala.jdk.OptionConverters._
+import com.stackstate.pac4j.PekkoHttpWebContext
 import org.pac4j.core.context.WebContext
 import org.pac4j.core.context.session.SessionStore
 
-class AkkaHttpSessionStore() extends SessionStore {
+class PekkoHttpSessionStore() extends SessionStore {
   override def getSessionId(context: WebContext, createSession: Boolean): Optional[String] = {
     if (createSession) {
-      Optional.of(context.asInstanceOf[AkkaHttpWebContext].getOrCreateSessionId())
+      Optional.of(context.asInstanceOf[PekkoHttpWebContext].getOrCreateSessionId())
     } else {
-      context.asInstanceOf[AkkaHttpWebContext].getSessionId.asJava
+      context.asInstanceOf[PekkoHttpWebContext].getSessionId.toJava
     }
 
   }
 
   override def get(context: WebContext, key: String): Optional[Object] =
-    context.asInstanceOf[AkkaHttpWebContext].getSessionId match {
-      case Some(value) => context.asInstanceOf[AkkaHttpWebContext].sessionStorage.getSessionValue(value, key).asJava
+    context.asInstanceOf[PekkoHttpWebContext].getSessionId match {
+      case Some(value) => context.asInstanceOf[PekkoHttpWebContext].sessionStorage.getSessionValue(value, key).toJava
       case None => Optional.empty()
     }
 
   override def set(context: WebContext, key: String, value: scala.AnyRef): Unit = {
     context
-      .asInstanceOf[AkkaHttpWebContext]
+      .asInstanceOf[PekkoHttpWebContext]
       .sessionStorage
-      .setSessionValue(context.asInstanceOf[AkkaHttpWebContext].getOrCreateSessionId(), key, value)
+      .setSessionValue(context.asInstanceOf[PekkoHttpWebContext].getOrCreateSessionId(), key, value)
     ()
   }
 
-  override def destroySession(context: WebContext): Boolean = context.asInstanceOf[AkkaHttpWebContext].destroySession()
+  override def destroySession(context: WebContext): Boolean = context.asInstanceOf[PekkoHttpWebContext].destroySession()
 
   override def getTrackableSession(context: WebContext): Optional[AnyRef] =
-    context.asInstanceOf[AkkaHttpWebContext].getSessionId.asInstanceOf[Option[AnyRef]].asJava
+    context.asInstanceOf[PekkoHttpWebContext].getSessionId.asInstanceOf[Option[AnyRef]].toJava
 
   override def buildFromTrackableSession(context: WebContext, trackableSession: scala.Any): Optional[SessionStore] = {
     trackableSession match {
       case session: String if session.nonEmpty =>
-        context.asInstanceOf[AkkaHttpWebContext].trackSession(session)
+        context.asInstanceOf[PekkoHttpWebContext].trackSession(session)
         Optional.of(this)
 
       case _ =>
@@ -47,7 +47,7 @@ class AkkaHttpSessionStore() extends SessionStore {
   }
 
   override def renewSession(ctx: WebContext): Boolean = {
-    val context = ctx.asInstanceOf[AkkaHttpWebContext]
+    val context = ctx.asInstanceOf[PekkoHttpWebContext]
     context.getSessionId.foreach { sessionId =>
       val sessionValues = context.sessionStorage.getSessionValues(sessionId)
       destroySession(context)

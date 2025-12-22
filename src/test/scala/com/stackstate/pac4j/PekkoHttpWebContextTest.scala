@@ -2,9 +2,9 @@ package com.stackstate.pac4j
 
 import java.util.Optional
 
-import akka.http.scaladsl.model.HttpHeader.ParsingResult.Ok
-import akka.http.scaladsl.model.headers.{Cookie, HttpCookie}
-import akka.http.scaladsl.model._
+import org.apache.pekko.http.scaladsl.model.HttpHeader.ParsingResult.Ok
+import org.apache.pekko.http.scaladsl.model.headers.{Cookie, HttpCookie}
+import org.apache.pekko.http.scaladsl.model._
 import com.stackstate.pac4j.store.SessionStorage._
 import com.stackstate.pac4j.store.{ForgetfulSessionStorage, SessionStorage}
 
@@ -13,13 +13,13 @@ import org.scalatest.wordspec.AnyWordSpecLike
 
 import scala.collection.JavaConverters._
 import scala.concurrent.duration._
-import akka.http.scaladsl.model.headers.Location
+import org.apache.pekko.http.scaladsl.model.headers.Location
 
-class AkkaHttpWebContextTest extends AnyWordSpecLike with Matchers {
+class PekkoHttpWebContextTest extends AnyWordSpecLike with Matchers {
   lazy val cookie = ("cookieName", "cookieValue")
   val uuidRegex = "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
 
-  "AkkaHttpWebContext" should {
+  "PekkoHttpWebContext" should {
     "get/set request cookies" in withContext(cookies = List(Cookie("cookieName", "cookieValue"))) { webContext =>
       val contextCookie = webContext.getRequestCookies
       contextCookie.asScala.map(cookie => (cookie.getName, cookie.getValue)) shouldEqual Seq(cookie)
@@ -111,9 +111,9 @@ class AkkaHttpWebContextTest extends AnyWordSpecLike with Matchers {
     }) { webContext =>
       val sessionId = webContext.getOrCreateSessionId()
       webContext.addResponseSessionCookie()
-      webContext.getChanges.cookies.find(_.name == AkkaHttpWebContext.DEFAULT_COOKIE_NAME) shouldBe Some(
+      webContext.getChanges.cookies.find(_.name == PekkoHttpWebContext.DEFAULT_COOKIE_NAME) shouldBe Some(
         HttpCookie(
-          name = AkkaHttpWebContext.DEFAULT_COOKIE_NAME,
+          name = PekkoHttpWebContext.DEFAULT_COOKIE_NAME,
           value = sessionId,
           expires = None,
           maxAge = Some(3),
@@ -129,11 +129,11 @@ class AkkaHttpWebContextTest extends AnyWordSpecLike with Matchers {
     "don't add a cookie when the session was expired" in withContext(sessionStorage = new ForgetfulSessionStorage {
       override def renewSession(session: SessionKey): Boolean = false
     }) { webContext =>
-      webContext.getChanges.cookies.find(_.name == AkkaHttpWebContext.DEFAULT_COOKIE_NAME) shouldBe None
+      webContext.getChanges.cookies.find(_.name == PekkoHttpWebContext.DEFAULT_COOKIE_NAME) shouldBe None
     }
 
     "don't add a cookie when the session is empty" in withContext(sessionStorage = new ForgetfulSessionStorage {}) { webContext =>
-      webContext.getChanges.cookies.find(_.name == AkkaHttpWebContext.DEFAULT_COOKIE_NAME) shouldBe None
+      webContext.getChanges.cookies.find(_.name == PekkoHttpWebContext.DEFAULT_COOKIE_NAME) shouldBe None
     }
 
     "make the session cookie secure when running over https" in withContext(scheme = "https", sessionStorage = new ForgetfulSessionStorage {
@@ -143,11 +143,11 @@ class AkkaHttpWebContextTest extends AnyWordSpecLike with Matchers {
     }) { webContext =>
       webContext.getOrCreateSessionId()
       webContext.addResponseSessionCookie()
-      webContext.getChanges.cookies.find(_.name == AkkaHttpWebContext.DEFAULT_COOKIE_NAME).get.secure shouldBe true
+      webContext.getChanges.cookies.find(_.name == PekkoHttpWebContext.DEFAULT_COOKIE_NAME).get.secure shouldBe true
     }
 
     "pick up the session cookie and send it back" in withContext(
-      cookies = List(Cookie(AkkaHttpWebContext.DEFAULT_COOKIE_NAME, "my_session")),
+      cookies = List(Cookie(PekkoHttpWebContext.DEFAULT_COOKIE_NAME, "my_session")),
       sessionStorage = new ForgetfulSessionStorage {
         override val sessionLifetime = 3.seconds
 
@@ -157,11 +157,11 @@ class AkkaHttpWebContextTest extends AnyWordSpecLike with Matchers {
       }
     ) { webContext =>
       webContext.addResponseSessionCookie()
-      webContext.getChanges.cookies.find(_.name == AkkaHttpWebContext.DEFAULT_COOKIE_NAME).isDefined shouldEqual true
+      webContext.getChanges.cookies.find(_.name == PekkoHttpWebContext.DEFAULT_COOKIE_NAME).isDefined shouldEqual true
     }
 
     "pick up the session cookie from cookies that are no longer sessions" in withContext(
-      cookies = List(Cookie(AkkaHttpWebContext.DEFAULT_COOKIE_NAME, "some_session"), Cookie(AkkaHttpWebContext.DEFAULT_COOKIE_NAME, "my_session")),
+      cookies = List(Cookie(PekkoHttpWebContext.DEFAULT_COOKIE_NAME, "some_session"), Cookie(PekkoHttpWebContext.DEFAULT_COOKIE_NAME, "my_session")),
       sessionStorage = new ForgetfulSessionStorage {
         override val sessionLifetime = 3.seconds
 
@@ -173,11 +173,11 @@ class AkkaHttpWebContextTest extends AnyWordSpecLike with Matchers {
       webContext.trackSession("my_session") // same as set
       webContext.getSessionStore.set(webContext, "my_session", "foo")
       webContext.addResponseSessionCookie()
-      webContext.getChanges.cookies.find(_.name == AkkaHttpWebContext.DEFAULT_COOKIE_NAME).get.value shouldEqual "my_session"
+      webContext.getChanges.cookies.find(_.name == PekkoHttpWebContext.DEFAULT_COOKIE_NAME).get.value shouldEqual "my_session"
     }
 
     "creates a new sessionId when the cookie was expired" in withContext(
-      cookies = List(Cookie(AkkaHttpWebContext.DEFAULT_COOKIE_NAME, "my_session")),
+      cookies = List(Cookie(PekkoHttpWebContext.DEFAULT_COOKIE_NAME, "my_session")),
       sessionStorage = new ForgetfulSessionStorage {
         override val sessionLifetime = 3.seconds
 
@@ -190,7 +190,7 @@ class AkkaHttpWebContextTest extends AnyWordSpecLike with Matchers {
     }
 
     "creates a new sessionId when the session was destroyed" in withContext(
-      cookies = List(Cookie(AkkaHttpWebContext.DEFAULT_COOKIE_NAME, "my_session")),
+      cookies = List(Cookie(PekkoHttpWebContext.DEFAULT_COOKIE_NAME, "my_session")),
       sessionStorage = new ForgetfulSessionStorage {
         override val sessionLifetime = 3.seconds
 
@@ -202,7 +202,7 @@ class AkkaHttpWebContextTest extends AnyWordSpecLike with Matchers {
     }
 
     "stores the trackable session when requested" in withContext(
-      cookies = List(Cookie(AkkaHttpWebContext.DEFAULT_COOKIE_NAME, "my_session")),
+      cookies = List(Cookie(PekkoHttpWebContext.DEFAULT_COOKIE_NAME, "my_session")),
       sessionStorage = new ForgetfulSessionStorage {
         override val sessionLifetime = 3.seconds
 
@@ -220,7 +220,7 @@ class AkkaHttpWebContextTest extends AnyWordSpecLike with Matchers {
     }
 
     "getOrCreateSessionId return a valid SessionId if an empty string is defined" in withContext(
-      cookies = List(Cookie(AkkaHttpWebContext.DEFAULT_COOKIE_NAME, "")),
+      cookies = List(Cookie(PekkoHttpWebContext.DEFAULT_COOKIE_NAME, "")),
       sessionStorage = new ForgetfulSessionStorage {
         override val sessionLifetime = 3.seconds
 
@@ -231,7 +231,7 @@ class AkkaHttpWebContextTest extends AnyWordSpecLike with Matchers {
     }
 
     "getOrCreateSessionId return the defined sessionId if its valid" in withContext(
-      cookies = List(Cookie(AkkaHttpWebContext.DEFAULT_COOKIE_NAME, "validId")),
+      cookies = List(Cookie(PekkoHttpWebContext.DEFAULT_COOKIE_NAME, "validId")),
       sessionStorage = new ForgetfulSessionStorage {
         override val sessionLifetime = 3.seconds
 
@@ -245,14 +245,14 @@ class AkkaHttpWebContextTest extends AnyWordSpecLike with Matchers {
       override def sessionExists(sessionKey: SessionKey): Boolean = true
     }) { webContext =>
       val immediatelyExpireCookie: HttpCookie =
-        HttpCookie.apply(name = AkkaHttpWebContext.DEFAULT_COOKIE_NAME, value = "", maxAge = Some(0), path = Some("/"), httpOnly = true)
+        HttpCookie.apply(name = PekkoHttpWebContext.DEFAULT_COOKIE_NAME, value = "", maxAge = Some(0), path = Some("/"), httpOnly = true)
       webContext.addResponseSessionCookie()
 
       webContext.getChanges.cookies shouldBe List(immediatelyExpireCookie)
     }
 
     "addResponseSessionCookie with a non-empty session returns a valid cookie" in withContext(
-      cookies = List(Cookie(AkkaHttpWebContext.DEFAULT_COOKIE_NAME, "validId")),
+      cookies = List(Cookie(PekkoHttpWebContext.DEFAULT_COOKIE_NAME, "validId")),
       sessionStorage = new ForgetfulSessionStorage {
         override val sessionLifetime = 3.seconds
 
@@ -260,14 +260,14 @@ class AkkaHttpWebContextTest extends AnyWordSpecLike with Matchers {
       }
     ) { webContext =>
       val validCookie: HttpCookie =
-        HttpCookie.apply(name = AkkaHttpWebContext.DEFAULT_COOKIE_NAME, value = "validId", maxAge = Some(3), path = Some("/"), httpOnly = true)
+        HttpCookie.apply(name = PekkoHttpWebContext.DEFAULT_COOKIE_NAME, value = "validId", maxAge = Some(3), path = Some("/"), httpOnly = true)
       webContext.addResponseSessionCookie()
 
       webContext.getChanges.cookies shouldBe List(validCookie)
     }
 
     "when getSessionId is called and the session exists in the store should return it" in withContext(
-      cookies = List(Cookie(AkkaHttpWebContext.DEFAULT_COOKIE_NAME, "validId")),
+      cookies = List(Cookie(PekkoHttpWebContext.DEFAULT_COOKIE_NAME, "validId")),
       sessionStorage = new ForgetfulSessionStorage {
         override val sessionLifetime = 3.seconds
 
@@ -278,7 +278,7 @@ class AkkaHttpWebContextTest extends AnyWordSpecLike with Matchers {
     }
 
     "when getSessionId is called and the session doesn't exists in the store should return None" in withContext(
-      cookies = List(Cookie(AkkaHttpWebContext.DEFAULT_COOKIE_NAME, "notValidAnyMore")),
+      cookies = List(Cookie(PekkoHttpWebContext.DEFAULT_COOKIE_NAME, "notValidAnyMore")),
       sessionStorage = new ForgetfulSessionStorage {
         override val sessionLifetime = 3.seconds
 
@@ -296,12 +296,12 @@ class AkkaHttpWebContextTest extends AnyWordSpecLike with Matchers {
                   hostAddress: String = "",
                   hostPort: Int = 0,
                   formFields: Seq[(String, String)] = Seq.empty,
-                  sessionStorage: SessionStorage = new ForgetfulSessionStorage)(f: AkkaHttpWebContext => Unit): Unit = {
+                  sessionStorage: SessionStorage = new ForgetfulSessionStorage)(f: PekkoHttpWebContext => Unit): Unit = {
     val parsedHeaders: List[HttpHeader] = requestHeaders.map { case (k, v) => HttpHeader.parse(k, v) }.collect { case Ok(header, _) => header }
     val completeHeaders: List[HttpHeader] = parsedHeaders ++ cookies
     val uri = Uri(url).withScheme(scheme).withAuthority(hostAddress, hostPort)
     val request = HttpRequest(uri = uri, headers = completeHeaders)
 
-    f(AkkaHttpWebContext(request, formFields, sessionStorage, AkkaHttpWebContext.DEFAULT_COOKIE_NAME))
+    f(PekkoHttpWebContext(request, formFields, sessionStorage, PekkoHttpWebContext.DEFAULT_COOKIE_NAME))
   }
 }

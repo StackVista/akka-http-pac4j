@@ -2,7 +2,7 @@ package com.stackstate.pac4j.authorizer
 
 import java.util.UUID
 
-import com.stackstate.pac4j.AkkaHttpWebContext
+import com.stackstate.pac4j.PekkoHttpWebContext
 import org.pac4j.core.context.Cookie
 
 import scala.concurrent.duration.FiniteDuration
@@ -12,7 +12,7 @@ object CsrfCookieAuthorizer {
 
   val CookiePath = "/"
 
-  def apply(context: AkkaHttpWebContext, maxAge: Option[FiniteDuration]): AkkaHttpWebContext = {
+  def apply(context: PekkoHttpWebContext, maxAge: Option[FiniteDuration]): PekkoHttpWebContext = {
     val token = UUID.randomUUID.toString
 
     val cookieWithDomain = createCookie(token, maxAge)

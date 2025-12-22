@@ -1,6 +1,6 @@
 package com.stackstate.pac4j.store
 
-import akka.http.scaladsl.testkit.ScalatestRouteTest
+import org.apache.pekko.http.scaladsl.testkit.ScalatestRouteTest
 import com.stackstate.pac4j.store.InMemorySessionStorage._
 
 import org.scalatest.matchers.should.Matchers
