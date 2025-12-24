@@ -18,9 +18,9 @@ import scala.jdk.OptionConverters._
   * and need to be applied to an HTTP response.
   */
 class PekkoHttpWebContext(val request: HttpRequest,
-                         val formFields: Seq[(String, String)],
-                         private[pac4j] val sessionStorage: SessionStorage,
-                         val sessionCookieName: String)
+                          val formFields: Seq[(String, String)],
+                          private[pac4j] val sessionStorage: SessionStorage,
+                          val sessionCookieName: String)
     extends WebContext {
 
   import com.stackstate.pac4j.PekkoHttpWebContext._

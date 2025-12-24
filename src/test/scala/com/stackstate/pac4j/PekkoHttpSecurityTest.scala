@@ -51,14 +51,14 @@ class PekkoHttpSecurityTest extends AnyWordSpecLike with Matchers with Scalatest
 
       config.setHttpActionAdapter(actionAdapter)
       val securityLogic: PekkoHttpSecurityLogic = (_: WebContext,
-                                                  _: SessionStore,
-                                                  _: Config,
-                                                  _: SecurityGrantedAccessAdapter,
-                                                  httpActionAdapter: HttpActionAdapter,
-                                                  clients: String,
-                                                  authorizers: String,
-                                                  matchers: String,
-                                                  _: AnyRef) => {
+                                                   _: SessionStore,
+                                                   _: Config,
+                                                   _: SecurityGrantedAccessAdapter,
+                                                   httpActionAdapter: HttpActionAdapter,
+                                                   clients: String,
+                                                   authorizers: String,
+                                                   matchers: String,
+                                                   _: AnyRef) => {
         clients shouldBe "myclients"
         matchers shouldBe DefaultMatchers.SECURITYHEADERS
         matchers should not be empty
@@ -84,14 +84,14 @@ class PekkoHttpSecurityTest extends AnyWordSpecLike with Matchers with Scalatest
       val profile = new CommonProfile()
 
       val securityLogic: PekkoHttpSecurityLogic = (context: WebContext,
-                                                  sessionStore: SessionStore,
-                                                  _: Config,
-                                                  securityGrantedAccessAdapter: SecurityGrantedAccessAdapter,
-                                                  _: HttpActionAdapter,
-                                                  _: String,
-                                                  _: String,
-                                                  _: String,
-                                                  _: AnyRef) => {
+                                                   sessionStore: SessionStore,
+                                                   _: Config,
+                                                   securityGrantedAccessAdapter: SecurityGrantedAccessAdapter,
+                                                   _: HttpActionAdapter,
+                                                   _: String,
+                                                   _: String,
+                                                   _: String,
+                                                   _: AnyRef) => {
         securityGrantedAccessAdapter.adapt(context, sessionStore, List[UserProfile](profile).asJava)
       }
       config.setSecurityLogic(securityLogic)
